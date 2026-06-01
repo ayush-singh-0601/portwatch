@@ -1,0 +1,214 @@
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-md);
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border-bottom: 1px solid var(--border);
+  z-index: var(--z-navbar);
+  gap: var(--space-md);
+}
+
+/* Glow line at bottom */
+.navbar::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    var(--accent-glow),
+    var(--accent) 50%,
+    var(--accent-glow),
+    transparent
+  );
+  opacity: 0.5;
+}
+
+/* ── Left ─────────────────────────────────────────────────── */
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.navbar-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.navbar-menu-btn:hover {
+  background: var(--accent-subtle);
+  border-color: var(--border);
+  color: var(--accent);
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.navbar-logo {
+  color: var(--accent);
+  display: flex;
+  filter: drop-shadow(0 0 8px var(--accent-glow));
+}
+
+.navbar-title {
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.navbar-title-port {
+  color: var(--text-primary);
+}
+
+.navbar-title-watch {
+  color: var(--accent);
+}
+
+.navbar-subtitle {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-left: var(--space-sm);
+  border-left: 1px solid var(--border);
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .navbar-subtitle {
+    display: block;
+  }
+}
+
+/* ── Center ───────────────────────────────────────────────── */
+.navbar-center {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .navbar-center {
+    display: flex;
+    align-items: center;
+  }
+}
+
+.navbar-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 6px 14px;
+  background: var(--accent-subtle);
+  border: 1px solid rgba(100, 220, 220, 0.1);
+  border-radius: var(--radius-full);
+}
+
+.navbar-stat-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.navbar-stat-count {
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 24px;
+  text-align: center;
+}
+
+.navbar-stat-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Right ────────────────────────────────────────────────── */
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.navbar-search-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 7px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  transition: all var(--transition-normal);
+}
+
+.navbar-search-btn:hover {
+  background: var(--bg-glass-light);
+  border-color: var(--border-accent);
+  color: var(--accent);
+}
+
+.navbar-search-label {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .navbar-search-label {
+    display: inline;
+  }
+}
+
+.navbar-kbd {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  padding: 2px 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .navbar-kbd {
+    display: inline;
+  }
+}
+
+.navbar-icon-btn {
+  flex-shrink: 0;
+}

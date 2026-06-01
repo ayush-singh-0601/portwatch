@@ -1,0 +1,53 @@
+.identity-card {
+  margin-bottom: var(--space-lg);
+}
+
+.identity-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+.identity-card-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.identity-card-item:hover {
+  border-color: var(--border-hover);
+}
+
+.identity-card-item-full {
+  grid-column: 1 / -1;
+}
+
+.identity-card-value {
+  font-weight: 500;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.identity-card-flag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.identity-card-type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.identity-card-type-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

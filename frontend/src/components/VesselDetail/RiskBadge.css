@@ -1,0 +1,48 @@
+.risk-badge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.risk-badge-svg {
+  position: absolute;
+  inset: 0;
+}
+
+.risk-badge-arc {
+  animation: dashOffset 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.risk-badge-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.risk-badge-score {
+  font-weight: 800;
+  line-height: 1;
+}
+
+.risk-badge-label {
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+/* High risk pulsing glow */
+.risk-badge-high {
+  animation: glowDanger 2s ease-in-out infinite;
+  border-radius: 50%;
+}
+
+.risk-badge-glow-ring {
+  animation: pulse 2s ease-in-out infinite;
+}

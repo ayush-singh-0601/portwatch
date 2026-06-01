@@ -1,0 +1,100 @@
+/* ═══════════════════════════════════════════════════════════════
+   OwnershipGraph Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+.ownership-graph-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-height: 300px;
+}
+
+.ownership-graph-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ownership-graph-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ownership-graph-hint {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.ownership-graph-svg {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  cursor: grab;
+}
+
+.ownership-graph-svg:active {
+  cursor: grabbing;
+}
+
+/* Links */
+.ownership-link {
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 1.5;
+}
+
+.ownership-link-label {
+  fill: var(--text-muted);
+  font-size: 8px;
+  font-family: 'Inter', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+/* Nodes */
+.ownership-node {
+  cursor: pointer;
+}
+
+.ownership-node circle {
+  transition: fill-opacity 0.2s ease, stroke-width 0.2s ease;
+}
+
+.ownership-node:hover circle {
+  fill-opacity: 0.3;
+  stroke-width: 2.5;
+}
+
+.ownership-node-label {
+  fill: var(--text-secondary);
+  font-size: 9px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.ownership-country {
+  fill: var(--text-muted);
+  font-size: 7px;
+  font-family: 'JetBrains Mono', 'Inter', monospace;
+  letter-spacing: 0.1em;
+  pointer-events: none;
+}
+
+/* Pulse animation for alert nodes */
+.node-pulse {
+  animation: nodePulse 2s ease-in-out infinite;
+}
+
+@keyframes nodePulse {
+  0%, 100% { stroke-opacity: 1; }
+  50% { stroke-opacity: 0.4; }
+}

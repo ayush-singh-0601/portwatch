@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  # ── TimescaleDB + PostGIS ──────────────────────────────────────────
+  db:
+    image: timescale/timescaledb-ha:pg16
+    container_name: portwatch-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: portwatch
+      POSTGRES_USER: portwatch
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-portwatch_dev_password}
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portwatch"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI Backend ────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: portwatch-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://portwatch:${DB_PASSWORD:-portwatch_dev_password}@db:5432/portwatch
+      AISSTREAM_API_KEY: ${AISSTREAM_API_KEY:-}
+      MOCK_DATA_MODE: ${MOCK_DATA_MODE:-true}
+      APP_ENV: ${APP_ENV:-development}
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ── React Frontend (dev server) ───────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: portwatch-ui
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:8000
+      VITE_WS_URL: ws://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  timescaledb_data:
+    driver: local

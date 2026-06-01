@@ -1,0 +1,39 @@
+[project]
+name = "portwatch-backend"
+version = "0.1.0"
+description = "PortWatch Maritime OSINT Platform — Backend API"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "PortWatch Team" }]
+
+dependencies = [
+    "fastapi[standard]>=0.115.0",
+    "uvicorn[standard]",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg",
+    "alembic",
+    "pydantic-settings",
+    "pyais>=3.0.0",
+    "rapidfuzz",
+    "websockets",
+    "httpx",
+    "networkx",
+    "weasyprint",
+    "jinja2",
+    "python-multipart",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+]
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

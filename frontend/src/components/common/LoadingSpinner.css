@@ -1,0 +1,42 @@
+/* ═══════════════════════════════════════════════════════════════
+   LoadingSpinner Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px;
+}
+
+.spinner-icon {
+  animation: spinSlow 3s linear infinite;
+}
+
+.spinner-arc {
+  animation: spinArc 1.5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.spinner-north {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.spinner-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spinArc {
+  0% { stroke-dashoffset: 0; }
+  50% { stroke-dashoffset: -120; }
+  100% { stroke-dashoffset: -280; }
+}
