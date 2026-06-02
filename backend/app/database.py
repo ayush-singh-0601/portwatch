@@ -21,12 +21,14 @@ from sqlalchemy.ext.asyncio import (
 from app.config import settings
 
 # Create the async engine — pool settings tuned for a mid-size deployment.
+# connect_args includes ssl=require for Supabase compatibility.
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.APP_DEBUG,
     pool_size=20,
     max_overflow=10,
     pool_pre_ping=True,
+    connect_args={"ssl": "require"} if "supabase" in settings.DATABASE_URL else {},
 )
 
 # Session factory.

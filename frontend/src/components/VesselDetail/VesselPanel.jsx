@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import RiskBadge from './RiskBadge'
+import RiskBreakdown from './RiskBreakdown'
 import IdentityCard from './IdentityCard'
 import OwnershipGraph from './OwnershipGraph'
 import { getVesselBadgeClass, getVesselLabel } from '../../utils/vesselTypes'
@@ -143,6 +144,11 @@ export default function VesselPanel({ vessel, onClose }) {
                   <span>{timeSinceLastSeen()}</span>
                 </div>
               </div>
+            </div>
+
+            <div className="vessel-panel-section">
+              <h4 className="vessel-panel-section-title">Risk Score Breakdown</h4>
+              <RiskBreakdown vessel={vessel} />
             </div>
           </div>
         )}

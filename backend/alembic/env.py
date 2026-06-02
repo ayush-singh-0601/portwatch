@@ -32,7 +32,8 @@ def run_migrations_offline() -> None:
 
     Generates SQL script without connecting to the database.
     """
-    url = config.get_main_option("sqlalchemy.url")
+    from app.config import settings
+    url = settings.DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -56,10 +57,17 @@ def do_run_migrations(connection) -> None:
 
 async def run_async_migrations() -> None:
     """Run migrations in 'online' mode using an async engine."""
+    from app.config import settings
+    config_section = config.get_section(config.config_ini_section, {})
+    url = settings.DATABASE_URL
+    config_section["sqlalchemy.url"] = url
+    connect_args = {"ssl": "require"} if "supabase" in url else {}
+
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        config_section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=connect_args,
     )
 
     async with connectable.connect() as connection:

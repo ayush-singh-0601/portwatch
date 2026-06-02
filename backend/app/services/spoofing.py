@@ -14,7 +14,7 @@ from typing import Optional
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.position import Position
+from app.models.position import VesselPosition as Position
 from app.models.vessel import Vessel
 
 

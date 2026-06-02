@@ -45,9 +45,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("  AISStream   : %s", "configured" if settings.AISSTREAM_API_KEY else "not configured")
     logger.info("=" * 60)
 
+    # Start live AIS Ingest worker if Mock Data Mode is disabled
+    if not settings.MOCK_DATA_MODE:
+        logger.info("Mock Data Mode is DISABLED — starting real-time AIS Ingestion background worker...")
+        from app.services.ais_ingestion import ingestion_service
+        await ingestion_service.start()
+
     yield
 
     # ── Shutdown ───────────────────────────────────────────────────
+    if not settings.MOCK_DATA_MODE:
+        logger.info("Stopping real-time AIS Ingestion background worker...")
+        from app.services.ais_ingestion import ingestion_service
+        try:
+            await ingestion_service.stop()
+        except Exception as exc:
+            logger.error("Error stopping AIS Ingest worker during shutdown: %s", exc)
+
     logger.info("PortWatch API shutting down — disposing database engine")
     from app.database import engine
 

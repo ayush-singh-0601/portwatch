@@ -15,7 +15,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.position import Position
+from app.models.position import VesselPosition as Position
 from app.models.dark_event import DarkEvent
 
 # Default dead zones if GeoJSON is not present

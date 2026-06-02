@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>PortWatch Intelligence Report — {{ vessel.name }} (IMO {{ vessel.imo }})</title>
+    <style>
+        /* ═══════════════════════════════════════════════════════════
+           PortWatch Intel Report — Print-optimised stylesheet
+           ═══════════════════════════════════════════════════════════ */
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        @page {
+            size: A4;
+            margin: 2cm 2cm 2.5cm 2cm;
+
+            @top-left {
+                content: "PORTWATCH — CONFIDENTIAL";
+                font-family: 'Inter', sans-serif;
+                font-size: 8pt;
+                color: #888;
+                letter-spacing: 0.1em;
+            }
+            @top-right {
+                content: "IMO {{ vessel.imo }}";
+                font-family: 'Inter', monospace;
+                font-size: 8pt;
+                color: #888;
+            }
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: 'Inter', sans-serif;
+                font-size: 8pt;
+                color: #999;
+            }
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 10pt;
+            color: #1a1a2e;
+            line-height: 1.6;
+        }
+
+        /* ── Cover Header ──────────────────────────────────── */
+        .report-header {
+            background: linear-gradient(135deg, #0b1929 0%, #16213e 60%, #1a1a4e 100%);
+            color: white;
+            padding: 40px 36px;
+            margin: -2cm -2cm 24px -2cm;
+            page-break-after: avoid;
+        }
+
+        .report-header-classification {
+            font-size: 9pt;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            color: #e94560;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .report-header h1 {
+            font-size: 24pt;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+            color: white;
+        }
+
+        .report-header-subtitle {
+            font-size: 14pt;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 16px;
+        }
+
+        .report-header-meta {
+            display: flex;
+            gap: 24px;
+            font-size: 9pt;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .report-header-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* ── Section headings ──────────────────────────────── */
+        .section-title {
+            font-size: 14pt;
+            font-weight: 700;
+            color: #0f3460;
+            margin: 28px 0 12px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #e94560;
+            page-break-after: avoid;
+        }
+
+        .section-subtitle {
+            font-size: 10pt;
+            font-weight: 600;
+            color: #16213e;
+            margin: 16px 0 8px;
+        }
+
+        /* ── Tables ────────────────────────────────────────── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0 20px;
+            font-size: 9.5pt;
+        }
+
+        th {
+            background: #f0f2f5;
+            color: #16213e;
+            font-weight: 600;
+            text-align: left;
+            padding: 8px 12px;
+            border-bottom: 2px solid #d0d5dd;
+            font-size: 8.5pt;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 7px 12px;
+            border-bottom: 1px solid #eaecf0;
+            vertical-align: top;
+        }
+
+        tr:nth-child(even) {
+            background: #fafbfc;
+        }
+
+        .key-value-table td:first-child {
+            width: 180px;
+            font-weight: 600;
+            color: #475467;
+        }
+
+        /* ── Risk Score ────────────────────────────────────── */
+        .risk-score-container {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding: 16px 20px;
+            background: #f8f9fb;
+            border: 1px solid #e0e4ea;
+            border-radius: 8px;
+            margin: 12px 0 20px;
+        }
+
+        .risk-score-circle {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22pt;
+            font-weight: 800;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .risk-low { background: #22c55e; }
+        .risk-medium { background: #f59e0b; }
+        .risk-high { background: #ef4444; }
+        .risk-critical { background: #991b1b; }
+
+        .risk-score-details {
+            flex: 1;
+        }
+
+        .risk-score-label {
+            font-size: 12pt;
+            font-weight: 700;
+            color: #16213e;
+            margin-bottom: 2px;
+        }
+
+        .risk-score-explanation {
+            font-size: 9pt;
+            color: #667085;
+            line-height: 1.5;
+        }
+
+        /* ── Factor bars ───────────────────────────────────── */
+        .factor-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .factor-label {
+            width: 200px;
+            font-size: 8.5pt;
+            color: #475467;
+            flex-shrink: 0;
+        }
+
+        .factor-bar-track {
+            flex: 1;
+            height: 8px;
+            background: #eaecf0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .factor-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        .factor-points {
+            width: 40px;
+            text-align: right;
+            font-size: 8.5pt;
+            font-weight: 700;
+            color: #16213e;
+        }
+
+        /* ── Alerts ────────────────────────────────────────── */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin: 12px 0;
+            font-size: 9.5pt;
+        }
+
+        .alert-danger {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        .alert-warning {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #92400e;
+        }
+
+        .alert-success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+        }
+
+        /* ── Lists ─────────────────────────────────────────── */
+        ul, ol {
+            margin: 8px 0 16px 24px;
+        }
+
+        li {
+            margin-bottom: 4px;
+        }
+
+        /* ── Mono / Code ───────────────────────────────────── */
+        .mono {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 9pt;
+        }
+
+        /* ── Footer ────────────────────────────────────────── */
+        .report-footer {
+            margin-top: 40px;
+            padding-top: 16px;
+            border-top: 1px solid #d0d5dd;
+            font-size: 8pt;
+            color: #98a2b3;
+            line-height: 1.5;
+        }
+
+        .report-footer strong {
+            color: #667085;
+        }
+
+        /* ── Page breaks ───────────────────────────────────── */
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ═══════════ COVER HEADER ═══════════ -->
+    <div class="report-header">
+        <div class="report-header-classification">CONFIDENTIAL — OSINT INTELLIGENCE PRODUCT</div>
+        <h1>PortWatch Intelligence Report</h1>
+        <div class="report-header-subtitle">{{ vessel.name }} — IMO {{ vessel.imo }}</div>
+        <div class="report-header-meta">
+            <span>Generated: {{ generated_at }}</span>
+            <span>Report ID: {{ report_id[:8] }}…</span>
+            <span>Classification: OSINT</span>
+        </div>
+    </div>
+
+    <!-- ═══════════ EXECUTIVE SUMMARY ═══════════ -->
+    {% if "executive_summary" in sections or "vessel_profile" in sections %}
+    <h2 class="section-title">1. Executive Summary</h2>
+    {% if narrative_summary %}
+    <p>{{ narrative_summary }}</p>
+    {% else %}
+    <p>
+        This report provides a comprehensive intelligence assessment of the vessel
+        <strong>{{ vessel.name }}</strong> (IMO {{ vessel.imo }}, MMSI {{ vessel.mmsi or 'N/A' }}),
+        flagged to <strong>{{ vessel.flag or 'Unknown' }}</strong>.
+        {% if risk_score %}
+        The vessel has been assigned a risk score of <strong>{{ risk_score.total_score }}/100</strong>
+        ({{ risk_level | upper }}) based on {{ risk_score.factors | length }} contributing factor(s).
+        {% endif %}
+        {% if sanctions_matches %}
+        <span style="color: #991b1b; font-weight: 600;">
+            ⚠ {{ sanctions_matches | length }} sanctions match(es) have been identified.
+        </span>
+        {% endif %}
+    </p>
+    {% endif %}
+    {% endif %}
+
+    <!-- ═══════════ VESSEL IDENTITY ═══════════ -->
+    {% if "vessel_profile" in sections %}
+    <h2 class="section-title">2. Vessel Identity</h2>
+    <table class="key-value-table">
+        <tr><td>Vessel Name</td><td>{{ vessel.name }}</td></tr>
+        <tr><td>IMO Number</td><td class="mono">{{ vessel.imo }}</td></tr>
+        <tr><td>MMSI</td><td class="mono">{{ vessel.mmsi or 'N/A' }}</td></tr>
+        <tr><td>Call Sign</td><td class="mono">{{ vessel.call_sign or 'N/A' }}</td></tr>
+        <tr><td>Flag State</td><td>{{ vessel.flag or 'N/A' }}</td></tr>
+        <tr><td>Vessel Type</td><td>{{ vessel.vessel_type or 'N/A' }}</td></tr>
+        <tr><td>Gross Tonnage</td><td>{{ vessel.gross_tonnage or 'N/A' }} GT</td></tr>
+        <tr><td>Deadweight</td><td>{{ vessel.dwt or 'N/A' }} DWT</td></tr>
+        <tr><td>Year Built</td><td>{{ vessel.year_built or 'N/A' }}</td></tr>
+    </table>
+    {% endif %}
+
+    <!-- ═══════════ OWNERSHIP STRUCTURE ═══════════ -->
+    {% if "ownership_structure" in sections %}
+    <h2 class="section-title">3. Ownership Structure</h2>
+    {% if ownership_entities %}
+    <table>
+        <thead>
+            <tr>
+                <th>Entity Name</th>
+                <th>Role</th>
+                <th>Country</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entity in ownership_entities %}
+            <tr>
+                <td>{{ entity.name }}</td>
+                <td>{{ entity.relationship_type or entity.entity_type or 'N/A' }}</td>
+                <td>{{ entity.country or 'N/A' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p><em>No ownership data available for this vessel.</em></p>
+    {% endif %}
+    {% endif %}
+
+    <!-- ═══════════ SANCTIONS SCREENING ═══════════ -->
+    {% if "sanctions_screening" in sections %}
+    <h2 class="section-title">4. Sanctions Screening</h2>
+    {% if sanctions_matches %}
+    <div class="alert alert-danger">
+        <strong>⚠ {{ sanctions_matches | length }} sanctions match(es) detected.</strong>
+        This vessel or associated entities have been flagged against international sanctions lists.
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Matched Entity</th>
+                <th>List</th>
+                <th>Match Type</th>
+                <th>Confidence</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for match in sanctions_matches %}
+            <tr>
+                <td>{{ match.matched_field or 'N/A' }}</td>
+                <td>{{ match.source or 'N/A' }}</td>
+                <td>{{ match.match_type }}</td>
+                <td class="mono">{{ "%.1f" | format(match.match_score) }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-success">
+        <strong>✓ No sanctions matches found.</strong>
+        Vessel and ownership entities have been screened against OFAC SDN, EU, UN, and OFSI lists.
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- ═══════════ RISK ASSESSMENT ═══════════ -->
+    {% if "risk_assessment" in sections and risk_score %}
+    <div class="page-break"></div>
+    <h2 class="section-title">5. Risk Assessment</h2>
+
+    <div class="risk-score-container">
+        <div class="risk-score-circle risk-{{ risk_level }}">
+            {{ risk_score.total_score }}
+        </div>
+        <div class="risk-score-details">
+            <div class="risk-score-label">Risk Level: {{ risk_level | upper }}</div>
+            <div class="risk-score-explanation">
+                Score calculated from {{ risk_score.factors | length }} deterministic factor(s).
+                All factors are auditable with evidence references.
+            </div>
+        </div>
+    </div>
+
+    <h3 class="section-subtitle">Contributing Factors</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Factor</th>
+                <th>Points</th>
+                <th>Evidence</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for factor in risk_score.factors %}
+            <tr>
+                <td>{{ factor.factor_name | replace('_', ' ') | title }}</td>
+                <td class="mono" style="color: #e94560; font-weight: 700;">+{{ factor.points }}</td>
+                <td>{{ factor.evidence_description or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- ═══════════ DARK ACTIVITY ═══════════ -->
+    {% if "dark_activity" in sections %}
+    <h2 class="section-title">6. AIS Dark Activity</h2>
+    {% if dark_events %}
+    <div class="alert alert-warning">
+        <strong>{{ dark_events | length }} dark event(s) detected</strong> —
+        periods where the vessel's AIS transponder was not transmitting.
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Start Time</th>
+                <th>Start Position</th>
+                <th>End Time</th>
+                <th>Duration (hrs)</th>
+                <th>Zone</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in dark_events %}
+            <tr>
+                <td class="mono">{{ event.start_time.strftime('%Y-%m-%d %H:%M') if event.start_time else 'N/A' }}</td>
+                <td class="mono">{{ "%.4f" | format(event.start_lat) }}°, {{ "%.4f" | format(event.start_lon) }}°</td>
+                <td class="mono">{{ event.end_time.strftime('%Y-%m-%d %H:%M') if event.end_time else 'Ongoing' }}</td>
+                <td class="mono">{{ "%.1f" | format(event.duration_hours) if event.duration_hours else '—' }}</td>
+                <td>{{ event.zone_type or 'Unknown' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p><em>No dark events detected in the analysis period.</em></p>
+    {% endif %}
+    {% endif %}
+
+    <!-- ═══════════ PORT HISTORY ═══════════ -->
+    {% if "port_history" in sections %}
+    <h2 class="section-title">7. Port Call History</h2>
+    {% if port_calls %}
+    <table>
+        <thead>
+            <tr>
+                <th>Port</th>
+                <th>Country</th>
+                <th>Arrival</th>
+                <th>Departure</th>
+                <th>PSC Detention</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pc in port_calls %}
+            <tr>
+                <td>{{ pc.port_name or 'Unknown' }}</td>
+                <td>{{ pc.port_country or 'N/A' }}</td>
+                <td class="mono">{{ pc.arrival_time.strftime('%Y-%m-%d') if pc.arrival_time else 'N/A' }}</td>
+                <td class="mono">{{ pc.departure_time.strftime('%Y-%m-%d') if pc.departure_time else '—' }}</td>
+                <td>{{ '🔴 Yes' if pc.psc_detention else '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p><em>No port call data available.</em></p>
+    {% endif %}
+    {% endif %}
+
+    <!-- ═══════════ RECOMMENDED ACTIONS ═══════════ -->
+    {% if risk_score and risk_score.total_score >= 25 %}
+    <h2 class="section-title">8. Recommended Actions</h2>
+    {% if narrative_actions %}
+    <p>{{ narrative_actions }}</p>
+    {% else %}
+    <ul>
+        {% if risk_score.total_score >= 75 %}
+        <li><strong>Immediate review required.</strong> Recommend denial of port entry pending further investigation.</li>
+        <li>Escalate to compliance officer for enhanced due diligence (EDD).</li>
+        <li>Cross-reference with satellite AIS for independent position verification.</li>
+        {% elif risk_score.total_score >= 50 %}
+        <li><strong>Enhanced screening recommended.</strong> Request additional documentation before chartering or port clearance.</li>
+        <li>Verify beneficial ownership through independent sources.</li>
+        <li>Monitor for continued AIS anomalies.</li>
+        {% else %}
+        <li>Standard due diligence is sufficient at current risk level.</li>
+        <li>Schedule periodic re-screening (recommended: quarterly).</li>
+        {% endif %}
+    </ul>
+    {% endif %}
+    {% endif %}
+
+    <!-- ═══════════ FOOTER ═══════════ -->
+    <div class="report-footer">
+        <p>
+            <strong>Disclaimer:</strong> This report is generated from publicly available open-source intelligence (OSINT).
+            It does not constitute legal advice. All data sources are public and free. Risk scores are deterministic
+            and rule-based — no machine learning or black-box algorithms are used. PortWatch does not facilitate harm;
+            it surfaces publicly available sanctions and ownership information that compliance professionals are
+            legally required to check.
+        </p>
+        <p style="margin-top: 8px;">
+            <strong>Generated by:</strong> PortWatch Maritime OSINT Platform v1.0 |
+            <strong>Report ID:</strong> {{ report_id }} |
+            <strong>Date:</strong> {{ generated_at }}
+        </p>
+    </div>
+
+</body>
+</html>

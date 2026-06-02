@@ -1,8 +1,11 @@
-"""Initial schema — all PortWatch tables, TimescaleDB hypertable, PostGIS indexes.
+"""Supabase-compatible schema — replaces TimescaleDB hypertable with standard table.
 
-Revision ID: 001_initial
+This migration supersedes 001_initial when running on Supabase (which does not
+support TimescaleDB). It creates all tables using standard PostgreSQL + PostGIS.
+
+Revision ID: 002_supabase_compat
 Revises: None
-Create Date: 2026-06-01
+Create Date: 2026-06-02
 """
 
 from typing import Sequence, Union
@@ -12,15 +15,14 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import ARRAY
 
 # revision identifiers
-revision: str = "001_initial"
+revision: str = "002_supabase_compat"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # ── Extensions ─────────────────────────────────────────────────
-    op.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;")
+    # ── Extensions (PostGIS only — no TimescaleDB on Supabase) ─────
     op.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
 
     # ── vessels ────────────────────────────────────────────────────
@@ -41,7 +43,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("mmsi"),
     )
 
-    # ── vessel_positions (hypertable) ──────────────────────────────
+    # ── vessel_positions (standard table — no hypertable) ──────────
     op.create_table(
         "vessel_positions",
         sa.Column("time", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
@@ -56,32 +58,8 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("time", "mmsi"),
     )
 
-    # Convert to TimescaleDB hypertable
-    op.execute("SELECT create_hypertable('vessel_positions', 'time');")
-
-    # Add PostGIS geography column
-    op.execute(
-        "ALTER TABLE vessel_positions "
-        "ADD COLUMN geog GEOGRAPHY(POINT, 4326) "
-        "GENERATED ALWAYS AS (ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography) STORED;"
-    )
-
-    # Indexes for positions
+    # Indexes for positions (standard B-tree, no GIST geography index)
     op.create_index("idx_pos_mmsi_time", "vessel_positions", ["mmsi", sa.text("time DESC")])
-    op.execute("CREATE INDEX idx_pos_geog ON vessel_positions USING GIST (geog);")
-
-    # Compression policy: compress after 24 hours
-    op.execute("""
-        ALTER TABLE vessel_positions SET (
-            timescaledb.compress,
-            timescaledb.compress_segmentby = 'mmsi',
-            timescaledb.compress_orderby = 'time DESC'
-        );
-    """)
-    op.execute("SELECT add_compression_policy('vessel_positions', INTERVAL '24 hours');")
-
-    # Retention policy: drop data older than 1 year
-    op.execute("SELECT add_retention_policy('vessel_positions', INTERVAL '1 year');")
 
     # ── ownership_entities ─────────────────────────────────────────
     op.create_table(
