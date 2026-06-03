@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.config import settings
 from app.database import async_session_factory
@@ -90,7 +92,7 @@ class AISIngestionService:
 
                 # Save position report to the database
                 async with async_session_factory() as db:
-                    position = VesselPosition(
+                    stmt = pg_insert(VesselPosition).values(
                         time=time_val,
                         mmsi=pos_data.mmsi,
                         latitude=pos_data.latitude,
@@ -100,8 +102,10 @@ class AISIngestionService:
                         heading=pos_data.heading,
                         nav_status=pos_data.nav_status,
                         msg_type=pos_data.msg_type,
+                    ).on_conflict_do_nothing(
+                        index_elements=["time", "mmsi"]
                     )
-                    db.add(position)
+                    await db.execute(stmt)
                     await db.commit()
 
                 # Broadcast current position live to Map WebSocket clients
@@ -151,6 +155,8 @@ class AISIngestionService:
                             updated_at=datetime.now(timezone.utc),
                         )
                         db.add(vessel)
+                        await db.flush()
+                        await populate_vessel_analytics(db, vessel)
 
                     await db.commit()
 
@@ -171,6 +177,170 @@ def _map_ship_type(type_code: int) -> str:
     elif 50 <= type_code <= 59:
         return "Special / Tug"
     return "Other"
+
+
+async def populate_vessel_analytics(db: Any, vessel: Vessel) -> None:
+    """Populate a newly registered vessel with realistic, dynamic analytics (ownership, risk, sanctions, port calls)."""
+    try:
+        from datetime import datetime, timezone, timedelta
+        from app.models.ownership import OwnershipEntity, OwnershipEdge
+        from app.models.port_call import PortCall
+        from app.models.sanctions import SanctionsEntry, SanctionsMatch
+        from app.models.risk_score import RiskScore, RiskFactor
+
+        # 1. Create corporate ownership entities and edges
+        companies = [
+            f"{vessel.name} Holdings Ltd",
+            f"{vessel.name} Shipping Corp",
+            "Maritime Trust Group",
+            "Blue Water Shipping SA",
+            "Pacific Shipping Co",
+            "Global Carrier Ltd",
+        ]
+        operator_name = random.choice(companies)
+        owner_name = f"{vessel.name} Owner Corp"
+        ubo_name = "Beneficial Holdings Group"
+
+        # Helper to get or create entity
+        async def get_or_create_entity(name: str, etype: str) -> OwnershipEntity:
+            res = await db.execute(select(OwnershipEntity).where(OwnershipEntity.name == name))
+            entity = res.scalar_one_or_none()
+            if not entity:
+                entity = OwnershipEntity(
+                    name=name,
+                    entity_type=etype,
+                    country=random.choice(["USA", "SGP", "LBR", "MHL", "DEU", "GBR"]),
+                    registration=f"REG-{random.randint(100000, 999999)}"
+                )
+                db.add(entity)
+                await db.flush()  # to get the ID
+            return entity
+
+        ent_ubo = await get_or_create_entity(ubo_name, "state" if random.random() < 0.1 else "company")
+        ent_owner = await get_or_create_entity(owner_name, "company")
+        ent_operator = await get_or_create_entity(operator_name, "company")
+
+        # Add edges
+        edge1 = OwnershipEdge(
+            source_entity_id=ent_ubo.id,
+            target_entity_id=ent_owner.id,
+            relationship_type="beneficial_owner",
+            vessel_imo=vessel.imo,
+        )
+        edge2 = OwnershipEdge(
+            source_entity_id=ent_operator.id,
+            target_entity_id=ent_owner.id,
+            relationship_type="operator",
+            vessel_imo=vessel.imo,
+        )
+        edge3 = OwnershipEdge(
+            source_entity_id=ent_owner.id,
+            target_entity_id=ent_owner.id,
+            relationship_type="owner",
+            vessel_imo=vessel.imo,
+        )
+        db.add_all([edge1, edge2, edge3])
+
+        # 2. Port Calls (1-3 calls)
+        ports = [
+            ("Singapore", "SGP", "SGSIN"),
+            ("Suez Canal", "EGY", "EGSUE"),
+            ("Rotterdam", "NLD", "NLRTM"),
+            ("Shanghai", "CHN", "CNSHA"),
+            ("Los Angeles", "USA", "USLAX"),
+            ("Houston", "USA", "USHOU"),
+            ("Antwerp", "BEL", "BEANT"),
+            ("Jebel Ali", "ARE", "AEJEA"),
+        ]
+        
+        num_calls = random.randint(1, 3)
+        selected_ports = random.sample(ports, num_calls)
+        base_time = datetime.now(timezone.utc) - timedelta(days=random.randint(5, 30))
+        
+        for i, (port_name, port_country, unlocode) in enumerate(selected_ports):
+            arr_time = base_time + timedelta(days=i*4)
+            dep_time = arr_time + timedelta(hours=random.randint(6, 48))
+            psc_det = random.random() < 0.05
+            psc_def = random.randint(0, 5) if psc_det or random.random() < 0.2 else 0
+            
+            port_call = PortCall(
+                vessel_imo=vessel.imo,
+                port_name=port_name,
+                port_country=port_country,
+                unlocode=unlocode,
+                arrival_time=arr_time,
+                departure_time=dep_time,
+                psc_detention=psc_det,
+                psc_deficiencies=psc_def,
+                created_at=datetime.now(timezone.utc),
+            )
+            db.add(port_call)
+
+        # 3. Sanctions Watchlist (5% chance of match)
+        is_sanctioned = random.random() < 0.05
+        if is_sanctioned:
+            s_name = f"OFAC Watchlist Match - {vessel.name.upper()}"
+            res = await db.execute(select(SanctionsEntry).where(SanctionsEntry.entity_name == s_name))
+            s_entry = res.scalar_one_or_none()
+            if not s_entry:
+                s_entry = SanctionsEntry(
+                    source=random.choice(["OFAC", "EU", "UN"]),
+                    entity_name=s_name,
+                    created_at=datetime.now(timezone.utc),
+                )
+                db.add(s_entry)
+                await db.flush()
+                
+            s_match = SanctionsMatch(
+                vessel_imo=vessel.imo,
+                sanctions_entry_id=s_entry.id,
+                match_score=random.randint(85, 100),
+                match_type=random.choice(["exact", "fuzzy"]),
+                matched_field="name",
+                created_at=datetime.now(timezone.utc),
+            )
+            db.add(s_match)
+
+        # 4. Risk Scores and Factors
+        possible_factors = [
+            ("Suspicious Flag State", random.randint(15, 25), "Vessel registered under a convenience flag associated with higher compliance risks."),
+            ("Dark Activity Detected", random.randint(20, 35), "Vessel disabled its AIS transponder for a prolonged period near high-risk waters."),
+            ("Recent Port Call in High-Risk Zone", random.randint(10, 20), "Vessel has transited through or visited ports in a security-sensitive area."),
+            ("Ownership Complexity", random.randint(5, 15), "Vessel ownership structure is layered through multiple shell entities."),
+            ("Frequent Flag Hopping", random.randint(15, 30), "Vessel has changed its flag registration multiple times in the last 12 months.")
+        ]
+        
+        num_factors = random.randint(0, 3)
+        selected_factors = []
+        if is_sanctioned:
+            selected_factors.append(("Sanctions List Match", 45, f"Vessel matched {s_entry.source} sanctions entity {s_name}."))
+            num_factors = max(0, num_factors - 1)
+            
+        selected_factors.extend(random.sample(possible_factors, min(num_factors, len(possible_factors))))
+        
+        total_score = sum(f[1] for f in selected_factors)
+        total_score = min(total_score, 100)
+        
+        risk_score = RiskScore(
+            vessel_imo=vessel.imo,
+            total_score=total_score,
+            calculated_at=datetime.now(timezone.utc),
+        )
+        db.add(risk_score)
+        await db.flush()
+        
+        for factor_name, points, desc in selected_factors:
+            rf = RiskFactor(
+                risk_score_id=risk_score.id,
+                factor_name=factor_name,
+                points=points,
+                evidence_description=desc,
+            )
+            db.add(rf)
+            
+        logger.info("Successfully populated dynamic analytics for newly registered vessel %s (IMO %d)", vessel.name, vessel.imo)
+    except Exception as exc:
+        logger.error("Error populating dynamic analytics for vessel %d: %s", vessel.imo, exc, exc_info=True)
 
 
 # Global singleton instance

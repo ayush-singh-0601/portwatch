@@ -43,12 +43,19 @@ class STSTransferDetector:
                     pb.time AS time_b,
                     pa.latitude AS lat_a,
                     pa.longitude AS lon_a,
-                    ST_Distance(pa.location, pb.location) AS distance_m
+                    ST_Distance(
+                        ST_SetSRID(ST_Point(pa.longitude, pa.latitude), 4326)::geography,
+                        ST_SetSRID(ST_Point(pb.longitude, pb.latitude), 4326)::geography
+                    ) AS distance_m
                 FROM vessel_positions pa
                 JOIN vessel_positions pb
                   ON pa.mmsi < pb.mmsi
                   AND pa.time BETWEEN pb.time - INTERVAL '1 minute' AND pb.time + INTERVAL '1 minute'
-                  AND ST_DWithin(pa.location, pb.location, 500)
+                  AND ST_DWithin(
+                        ST_SetSRID(ST_Point(pa.longitude, pa.latitude), 4326)::geography,
+                        ST_SetSRID(ST_Point(pb.longitude, pb.latitude), 4326)::geography,
+                        500
+                  )
                 WHERE pa.speed <= 2.0 
                   AND pb.speed <= 2.0
                   AND pa.time > NOW() - CAST(:window_interval AS INTERVAL)
@@ -118,24 +125,6 @@ class STSTransferDetector:
 
     async def _check_in_port_limits(self, lat: float, lon: float) -> bool:
         """Determine if the coordinates are within designated port limits."""
-        # Simple geofence check: if within 2km of a port location, we assume it's in port limits.
-        # For the MVP, we can check proximity to port calls or simple distance from any port.
-        try:
-            query = text(
-                """
-                SELECT EXISTS(
-                    SELECT 1 FROM port_calls
-                    WHERE ST_DWithin(
-                        ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography,
-                        ST_SetSRID(ST_Point(longitude, latitude), 4326)::geography,
-                        2000
-                    )
-                    LIMIT 1
-                )
-                """
-            )
-            # Default to False if no tables/ports are in the database.
-            res = await self.db.execute(query, {"lat": lat, "lon": lon})
-            return res.scalar() or False
-        except Exception:
-            return False
+        # port_calls table has no longitude/latitude columns; returning False
+        # until a proper ports/geofence table with coordinates is available.
+        return False

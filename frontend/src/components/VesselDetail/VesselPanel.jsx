@@ -246,18 +246,47 @@ export default function VesselPanel({ vessel, onClose }) {
 
         {activeTab === 'History' && (
           <div className="animate-fadeIn">
-            <div className="vessel-panel-section vessel-panel-history-placeholder">
-              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style={{ opacity: 0.3 }}>
-                <circle cx="20" cy="20" r="16" stroke="var(--text-muted)" strokeWidth="1.5" strokeDasharray="4 3"/>
-                <path d="M20 12v8l5 3" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <span className="text-muted" style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                Port call and movement history
-              </span>
-              <span className="text-muted" style={{ fontSize: '0.8125rem' }}>
-                Connect to backend to view historical AIS data and port calls.
-              </span>
-            </div>
+            {vessel.portCalls && vessel.portCalls.length > 0 ? (
+              <div className="vessel-panel-section">
+                <h4 className="vessel-panel-section-title">Port Call History</h4>
+                <div className="port-calls-timeline">
+                  {vessel.portCalls.map((pc, i) => (
+                    <div key={i} className="port-call-node">
+                      <div className="port-call-indicator"></div>
+                      <div className="port-call-details">
+                        <div className="port-call-header">
+                          <span className="port-call-name">{pc.portName} ({pc.portCountry})</span>
+                          {pc.pscDetention && <span className="badge badge-danger">Detention</span>}
+                        </div>
+                        <div className="port-call-meta mono">
+                          <span>Arr: {pc.arrivalTime ? new Date(pc.arrivalTime).toLocaleDateString() : '—'}</span>
+                          <span className="port-call-sep">|</span>
+                          <span>Dep: {pc.departureTime ? new Date(pc.departureTime).toLocaleDateString() : '—'}</span>
+                        </div>
+                        {pc.pscDeficiencies > 0 && (
+                          <div className="port-call-deficiencies text-warning">
+                            {pc.pscDeficiencies} PSC Deficiencies
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="vessel-panel-section vessel-panel-history-placeholder">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style={{ opacity: 0.3 }}>
+                  <circle cx="20" cy="20" r="16" stroke="var(--text-muted)" strokeWidth="1.5" strokeDasharray="4 3"/>
+                  <path d="M20 12v8l5 3" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="text-muted" style={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                  No Port Call History
+                </span>
+                <span className="text-muted" style={{ fontSize: '0.8125rem' }}>
+                  No historical port calls found for this vessel.
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -95,8 +95,9 @@ def create_app() -> FastAPI:
     )
 
     # ── Routers ────────────────────────────────────────────────────
-    from app.routers import ownership, positions, reports, risk, sanctions, vessels, ws
+    from app.routers import enriched, ownership, positions, reports, risk, sanctions, vessels, ws
 
+    app.include_router(enriched.router)
     app.include_router(vessels.router)
     app.include_router(positions.router)
     app.include_router(ownership.router)

@@ -255,3 +255,84 @@
     width: 100vw;
   }
 }
+
+/* ── Port Calls Timeline ─────────────────────────────────── */
+.port-calls-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  position: relative;
+  padding-left: var(--space-lg);
+  margin-top: var(--space-md);
+}
+
+.port-calls-timeline::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 5px;
+  width: 2px;
+  background: var(--border);
+}
+
+.port-call-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.port-call-indicator {
+  position: absolute;
+  left: -21px;
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  border: 2px solid var(--bg-glass);
+}
+
+.port-call-node:first-child .port-call-indicator {
+  background: var(--primary, #6366f1);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+}
+
+.port-call-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.port-call-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.port-call-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.port-call-meta {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.port-call-sep {
+  color: var(--border);
+}
+
+.port-call-deficiencies {
+  font-size: 0.75rem;
+  font-weight: 500;
+}

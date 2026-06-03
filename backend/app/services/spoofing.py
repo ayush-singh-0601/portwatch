@@ -8,6 +8,7 @@ Implements maritime anomaly detection:
 """
 
 from datetime import datetime, timedelta
+import logging
 import math
 from typing import Optional
 
@@ -17,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.position import VesselPosition as Position
 from app.models.vessel import Vessel
 
+logger = logging.getLogger(__name__)
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculate the great-circle distance between two points in kilometers.
@@ -112,14 +114,21 @@ class AISAnomalyDetector:
                 pa.longitude AS lon_a,
                 pb.latitude AS lat_b,
                 pb.longitude AS lon_b,
-                ST_Distance(pa.location, pb.location) AS distance_m
+                ST_Distance(
+                    ST_SetSRID(ST_Point(pa.longitude, pa.latitude), 4326)::geography,
+                    ST_SetSRID(ST_Point(pb.longitude, pb.latitude), 4326)::geography
+                ) AS distance_m
             FROM vessel_positions pa
             JOIN vessel_positions pb
               ON pa.mmsi = pb.mmsi
               AND pa.time < pb.time
               AND pb.time - pa.time <= CAST(:window_interval AS INTERVAL)
               -- Distances greater than 1,000,000 meters (1000 km)
-              AND NOT ST_DWithin(pa.location, pb.location, 1000000)
+              AND NOT ST_DWithin(
+                    ST_SetSRID(ST_Point(pa.longitude, pa.latitude), 4326)::geography,
+                    ST_SetSRID(ST_Point(pb.longitude, pb.latitude), 4326)::geography,
+                    1000000
+              )
             WHERE pa.time > NOW() - INTERVAL '1 hour'
             """
         )
@@ -219,25 +228,7 @@ class AISAnomalyDetector:
 
     async def _is_near_risk_zone(self, lat: float, lon: float) -> bool:
         """Check if coordinates are near high-risk/sanctioned ports or ship breaking yards."""
-        # Simple geofence check. In a production app, we would query the database
-        # for port coordinates matching sanctioned countries or known yards.
-        # For the MVP, we assume any slow speed near a port call in a high-risk area is risk loitering.
-        try:
-            query = text(
-                """
-                SELECT EXISTS(
-                    SELECT 1 FROM port_calls
-                    WHERE ST_DWithin(
-                        ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography,
-                        ST_SetSRID(ST_Point(longitude, latitude), 4326)::geography,
-                        5000
-                    )
-                    AND (psc_detention = TRUE OR psc_deficiencies > 3)
-                    LIMIT 1
-                )
-                """
-            )
-            res = await self.db.execute(query, {"lat": lat, "lon": lon})
-            return res.scalar() or False
-        except Exception:
-            return False
+        # port_calls table has no longitude/latitude columns; returning False
+        # until a proper ports/geofence table with coordinates is available.
+        logger.debug("_is_near_risk_zone: skipped – port_calls has no coordinate columns")
+        return False
