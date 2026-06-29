@@ -4,11 +4,11 @@
 
 .sidebar {
   position: fixed;
-  top: 60px;
+  top: 56px;
   left: 0;
   bottom: 0;
   width: 280px;
-  z-index: 800;
+  z-index: var(--z-sidebar, 100);
   padding: 20px;
   display: flex;
   flex-direction: column;

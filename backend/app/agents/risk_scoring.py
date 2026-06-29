@@ -55,7 +55,7 @@ HIGH_RISK_FLAG_STATES = {
 
 # Known sanctioned port countries (OFAC heavily sanctioned jurisdictions)
 SANCTIONED_PORT_COUNTRIES = {
-    "IR", "KP", "CU", "SY", "VE", "RU",
+    "IRN", "PRK", "CUB", "SYR", "VEN", "RUS",
 }
 
 

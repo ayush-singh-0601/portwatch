@@ -392,6 +392,7 @@ h4 { font-size: 1rem; }
 .badge-dot-danger  { background: var(--danger); box-shadow: 0 0 6px var(--danger-glow); }
 .badge-dot-warning { background: var(--warning); box-shadow: 0 0 6px var(--warning-glow); }
 .badge-dot-success { background: var(--success); box-shadow: 0 0 6px var(--success-glow); }
+.badge-dot-info    { background: var(--info); box-shadow: 0 0 6px hsla(240, 70%, 65%, 0.3); }
 
 /* ── Keyframe Animations ──────────────────────────────────────── */
 @keyframes fadeIn {

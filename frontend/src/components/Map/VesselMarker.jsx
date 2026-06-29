@@ -1,64 +1,75 @@
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { Marker, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import { getVesselColor, getVesselLabel } from '../../utils/vesselTypes'
 import { getRiskColor, getRiskLabelShort } from '../../utils/riskColors'
 
-function createVesselIcon(vessel, isSelected) {
-  const color = getVesselColor(vessel.type)
-  const size = isSelected ? 32 : 24
-  const glowOpacity = isSelected ? 0.7 : 0.4
-  const rotation = vessel.heading || 0
+const iconCache = new Map()
 
-  const svgHtml = `
-    <div style="transform: rotate(${rotation}deg); width: ${size}px; height: ${size}px; transition: transform 0.3s ease;">
-      <svg width="${size}" height="${size}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <filter id="glow-${vessel.id}" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="${isSelected ? 4 : 2}" flood-color="${color}" flood-opacity="${glowOpacity}"/>
-          </filter>
-        </defs>
-        <g filter="url(#glow-${vessel.id})">
-          <path d="M16 4 L24 26 L16 21 L8 26 Z"
-                fill="${color}"
-                fill-opacity="0.9"
-                stroke="${isSelected ? '#fff' : color}"
-                stroke-width="${isSelected ? 1.5 : 0.8}"
-                stroke-linejoin="round"/>
-        </g>
-        ${isSelected ? `
-        <circle cx="16" cy="16" r="14" fill="none" stroke="${color}" stroke-width="1" opacity="0.4">
-          <animate attributeName="r" values="14;18;14" dur="2s" repeatCount="indefinite"/>
-          <animate attributeName="opacity" values="0.4;0.1;0.4" dur="2s" repeatCount="indefinite"/>
-        </circle>` : ''}
+function roundedHeading(heading) {
+  const value = Number(heading)
+  if (!Number.isFinite(value)) return 0
+  return Math.round(value / 10) * 10
+}
+
+function createVesselIcon(vesselType, heading, isSelected) {
+  const color = getVesselColor(vesselType)
+  const size = isSelected ? 30 : 22
+  const rotation = roundedHeading(heading)
+  const cacheKey = `${vesselType}|${rotation}|${isSelected}`
+  const cached = iconCache.get(cacheKey)
+  if (cached) return cached
+
+  const html = `
+    <div class="vessel-icon-shell" style="--vessel-color: ${color}; --vessel-size: ${size}px; transform: rotate(${rotation}deg);">
+      <svg width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 4 L24 26 L16 21 L8 26 Z"
+          fill="${color}"
+          stroke="${isSelected ? '#ffffff' : color}"
+          stroke-width="${isSelected ? 2 : 1}"
+          stroke-linejoin="round"/>
       </svg>
     </div>
   `
 
-  return L.divIcon({
-    html: svgHtml,
+  const icon = L.divIcon({
+    html,
     className: `vessel-marker ${isSelected ? 'vessel-marker-selected' : ''}`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
     tooltipAnchor: [size / 2 + 4, 0],
   })
+
+  iconCache.set(cacheKey, icon)
+  return icon
 }
 
-export default function VesselMarker({ vessel, isSelected, onClick }) {
+function VesselMarker({ vessel, isSelected, onClick }) {
+  const lat = Number(vessel.position?.lat)
+  const lon = Number(vessel.position?.lon)
+
   const icon = useMemo(
-    () => createVesselIcon(vessel, isSelected),
-    [vessel.id, vessel.type, vessel.heading, isSelected]
+    () => createVesselIcon(vessel.type, vessel.heading, isSelected),
+    [vessel.type, vessel.heading, isSelected]
+  )
+  const position = useMemo(() => [lat, lon], [lat, lon])
+  const eventHandlers = useMemo(
+    () => ({
+      click: () => onClick?.(vessel),
+    }),
+    [onClick, vessel]
   )
 
-  if (!vessel.position?.lat || !vessel.position?.lon) return null
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+
+  const speed = Number(vessel.speed)
+  const heading = Number(vessel.heading)
 
   return (
     <Marker
-      position={[vessel.position.lat, vessel.position.lon]}
+      position={position}
       icon={icon}
-      eventHandlers={{
-        click: () => onClick?.(vessel),
-      }}
+      eventHandlers={eventHandlers}
     >
       <Tooltip
         className="vessel-tooltip"
@@ -80,8 +91,8 @@ export default function VesselMarker({ vessel, isSelected, onClick }) {
             }}>
               {getVesselLabel(vessel.type)}
             </span>
-            <span>{vessel.speed?.toFixed(1)} kn</span>
-            <span>{vessel.heading}°</span>
+            <span>{Number.isFinite(speed) ? speed.toFixed(1) : '0.0'} kn</span>
+            <span>{Number.isFinite(heading) ? Math.round(heading) : 0} deg</span>
           </div>
           {vessel.riskScore > 60 && (
             <div style={{
@@ -100,7 +111,7 @@ export default function VesselMarker({ vessel, isSelected, onClick }) {
                 background: getRiskColor(vessel.riskScore),
                 display: 'inline-block',
               }}/>
-              {getRiskLabelShort(vessel.riskScore)} RISK — {vessel.riskScore}
+              {getRiskLabelShort(vessel.riskScore)} RISK - {vessel.riskScore}
             </div>
           )}
         </div>
@@ -108,3 +119,5 @@ export default function VesselMarker({ vessel, isSelected, onClick }) {
     </Marker>
   )
 }
+
+export default memo(VesselMarker)

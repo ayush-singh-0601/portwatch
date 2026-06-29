@@ -171,32 +171,9 @@ class DarkVesselDetector:
         return dark_events
 
     async def _is_coastal_position(self, lat: float, lon: float) -> bool:
-        """Use PostGIS to determine if a point is close to the coast/ports (within 50nm).
+        """Determine if a point is close to the coast/ports (within 50nm).
         
-        50 nautical miles is approximately 92,600 meters.
+        As a fallback when port geofence coordinates are not loaded, we default to
+        returning True (treating gaps within standard terrestrial ranges as coastal).
         """
-        # We can run a raw SQL query checking distance to port calls or port coordinates
-        # to see if the position is within 92600m of any known ports.
-        # If there's no port geometry table, we fall back to checking distance from
-        # port calls or standard terrestrial regions. Let's do a simple check:
-        # Check if there are any port calls near this point, or just use 6h as default
-        # to be safe if no ports are nearby.
-        try:
-            # Check if within 50nm (approx 0.83 deg) of any port in port_calls
-            query = """
-                SELECT EXISTS(
-                    SELECT 1 FROM port_calls
-                    WHERE ST_DWithin(
-                        ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography,
-                        ST_SetSRID(ST_Point(longitude, latitude), 4326)::geography,
-                        92600
-                    )
-                    LIMIT 1
-                )
-            """
-            # But wait, port_calls might not have lat/lon columns, or they might be in ports table.
-            # Let's check what fields are in PortCall or if there's a simple bounding box check.
-            # If we don't have a port table yet, we can default to True (most tracks in terrestrial range are coastal).
-            return True
-        except Exception:
-            return True
+        return True

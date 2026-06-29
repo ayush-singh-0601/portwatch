@@ -8,18 +8,18 @@ Route::
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import func, select, text
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.models.ownership import OwnershipEdge, OwnershipEntity
+from app.models.ownership import OwnershipEdge
 from app.models.position import VesselPosition
-from app.models.risk_score import RiskFactor, RiskScore
-from app.models.sanctions import SanctionsEntry, SanctionsMatch
+from app.models.risk_score import RiskScore
+from app.models.sanctions import SanctionsMatch
 from app.models.vessel import Vessel
 from app.utils.flag_lookup import get_flag_info
 
@@ -62,6 +62,26 @@ def _vessel_type_normalise(raw: str | None) -> str:
     summary="Get all vessels with embedded position, risk, ownership, and sanctions",
 )
 async def get_enriched_vessels(
+    limit: int = Query(
+        1000,
+        ge=1,
+        le=5000,
+        description="Maximum number of enriched vessels to return",
+    ),
+    active_minutes: int = Query(
+        720,
+        ge=0,
+        le=43200,
+        description="Only include latest positions newer than this many minutes; 0 disables the age filter",
+    ),
+    include_unregistered: bool = Query(
+        True,
+        description="Include MMSI-only AIS positions that do not yet have a registered vessel record",
+    ),
+    include_inactive_registered: bool = Query(
+        False,
+        description="Include registered vessels even when they have no active/latest position",
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     """Return a flat JSON array of enriched vessel objects.
@@ -71,47 +91,62 @@ async def get_enriched_vessels(
     and sanctions screening results.  The shape matches exactly what
     the React frontend components expect.
     """
-    # ── 1. Fetch all vessels ─────────────────────────────────────
-    vessel_result = await db.execute(select(Vessel))
-    vessels = list(vessel_result.scalars().all())
+    # ── 1. Fetch all vessels with eager-loaded relationships ──────
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(minutes=active_minutes)
+        if active_minutes > 0
+        else None
+    )
 
-    # Collect all IMOs and MMSIs
-    imo_list = [v.imo for v in vessels]
-    mmsi_list = [v.mmsi for v in vessels if v.mmsi is not None]
+    # Collect all IMOs
+    latest_times_query = select(
+        VesselPosition.mmsi,
+        func.max(VesselPosition.time).label("latest_time"),
+    ).group_by(VesselPosition.mmsi)
+    if cutoff is not None:
+        latest_times_query = latest_times_query.where(VesselPosition.time >= cutoff)
+
+    latest_times = latest_times_query.subquery()
 
     # ── 2. Latest position per MMSI (single query for ALL MMSIs) ──
     latest_positions: dict[int, VesselPosition] = {}
     pos_query = (
         select(VesselPosition)
-        .distinct(VesselPosition.mmsi)
-        .order_by(VesselPosition.mmsi, VesselPosition.time.desc())
+        .join(
+            latest_times,
+            and_(
+                VesselPosition.mmsi == latest_times.c.mmsi,
+                VesselPosition.time == latest_times.c.latest_time,
+            ),
+        )
+        .order_by(VesselPosition.time.desc())
+        .limit(limit)
     )
     pos_result = await db.execute(pos_query)
     for pos in pos_result.scalars().all():
         latest_positions[pos.mmsi] = pos
 
-    # ── 3. Latest risk score per vessel (single query) ────────────
-    risk_scores: dict[int, RiskScore] = {}
-    if imo_list:
-        latest_risk_sub = (
-            select(
-                RiskScore.vessel_imo,
-                func.max(RiskScore.id).label("max_id"),
-            )
-            .where(RiskScore.vessel_imo.in_(imo_list))
-            .group_by(RiskScore.vessel_imo)
-            .subquery()
-        )
-        risk_query = (
-            select(RiskScore)
-            .join(latest_risk_sub, RiskScore.id == latest_risk_sub.c.max_id)
-            .options(selectinload(RiskScore.factors))
-        )
-        risk_result = await db.execute(risk_query)
-        for rs in risk_result.scalars().all():
-            risk_scores[rs.vessel_imo] = rs
+    active_mmsis = list(latest_positions)
+    vessel_query = select(Vessel).options(
+        selectinload(Vessel.risk_scores).selectinload(RiskScore.factors),
+        selectinload(Vessel.port_calls),
+        selectinload(Vessel.sanctions_matches).selectinload(SanctionsMatch.sanctions_entry),
+    )
 
-    # ── 4. Ownership per vessel ───────────────────────────────────
+    if include_inactive_registered or not active_mmsis:
+        if active_mmsis:
+            vessel_query = vessel_query.where(
+                or_(Vessel.mmsi.in_(active_mmsis), Vessel.mmsi.is_(None))
+            )
+        vessel_query = vessel_query.order_by(Vessel.updated_at.desc()).limit(limit)
+    else:
+        vessel_query = vessel_query.where(Vessel.mmsi.in_(active_mmsis)).limit(limit)
+
+    vessel_result = await db.execute(vessel_query)
+    vessels = list(vessel_result.scalars().all())
+    imo_list = [v.imo for v in vessels]
+
+    # ── 3. Ownership per vessel (single query for edges) ──────────
     ownership_map: dict[int, dict] = {}
     if imo_list:
         edges_result = await db.execute(
@@ -142,31 +177,7 @@ async def get_enriched_vessels(
             elif "operator" in rel or "manager" in rel:
                 ownership_map[imo]["operator"] = entity_name
 
-    # ── 5. Sanctions per vessel ───────────────────────────────────
-    sanctions_map: dict[int, dict] = {}
-    if imo_list:
-        matches_result = await db.execute(
-            select(SanctionsMatch)
-            .where(SanctionsMatch.vessel_imo.in_(imo_list))
-            .options(selectinload(SanctionsMatch.sanctions_entry))
-        )
-        matches = list(matches_result.scalars().all())
-
-        for match in matches:
-            imo = match.vessel_imo
-            if imo not in sanctions_map:
-                sanctions_map[imo] = {"matched": False, "lists": []}
-
-            entry = match.sanctions_entry
-            sanctions_map[imo]["lists"].append({
-                "name": f"{entry.source} — {entry.entity_name}" if entry else "Unknown",
-                "matchType": match.match_type or "fuzzy",
-                "confidence": round(match.match_score / 100.0, 2),
-            })
-            if match.match_score >= 85.0:
-                sanctions_map[imo]["matched"] = True
-
-    # ── 6. Assemble enriched response ─────────────────────────────
+    # ── 4. Assemble enriched response ─────────────────────────────
     enriched: list[dict] = []
     registered_mmsis = set()
 
@@ -177,8 +188,8 @@ async def get_enriched_vessels(
         # Position
         pos = latest_positions.get(vessel.mmsi) if vessel.mmsi else None
 
-        # Risk
-        risk = risk_scores.get(vessel.imo)
+        # Risk (latest score evaluated in Python)
+        risk = max(vessel.risk_scores, key=lambda x: x.id) if vessel.risk_scores else None
         risk_score_val = risk.total_score if risk else 0
         risk_factors = []
         if risk and risk.factors:
@@ -202,8 +213,17 @@ async def get_enriched_vessels(
             "flagHistory": [],
         })
 
-        # Sanctions (default if not found)
-        sanctions = sanctions_map.get(vessel.imo, {"matched": False, "lists": []})
+        # Sanctions (build from eager loaded matches)
+        sanctions = {"matched": False, "lists": []}
+        for match in vessel.sanctions_matches:
+            entry = match.sanctions_entry
+            sanctions["lists"].append({
+                "name": f"{entry.source} — {entry.entity_name}" if entry else "Unknown",
+                "matchType": match.match_type or "fuzzy",
+                "confidence": round(match.match_score / 100.0, 2),
+            })
+            if match.match_score >= 85.0:
+                sanctions["matched"] = True
 
         # Port calls
         port_calls_list = []
@@ -256,7 +276,9 @@ async def get_enriched_vessels(
         })
 
     # Synthesize vessels for positions with no registered vessel
-    for mmsi, pos in latest_positions.items():
+    for mmsi, pos in (latest_positions.items() if include_unregistered else []):
+        if len(enriched) >= limit:
+            break
         if mmsi not in registered_mmsis:
             flag_info = get_flag_info(None)  # unknown flag
             enriched.append({

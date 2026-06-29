@@ -1,6 +1,44 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { MOCK_VESSELS } from '../utils/mockData'
 import useWebSocket from './useWebSocket'
+
+const INITIAL_VESSEL_LIMIT = 1000
+const ACTIVE_POSITION_MINUTES = 720
+const MAX_TRACKED_VESSELS = 1500
+const MAX_SEARCH_RESULTS = 50
+
+function isFiniteCoordinate(value) {
+  return Number.isFinite(Number(value))
+}
+
+function normalizeVessel(vessel) {
+  const id = String(vessel.id ?? vessel.imo ?? vessel.mmsi ?? '')
+  if (!id) return null
+
+  return {
+    ...vessel,
+    id,
+    imo: vessel.imo != null ? String(vessel.imo) : null,
+    mmsi: vessel.mmsi != null ? String(vessel.mmsi) : null,
+    type: vessel.type || 'other',
+    riskScore: Number(vessel.riskScore ?? 0),
+  }
+}
+
+function normalizeVessels(data) {
+  const seen = new Set()
+  const result = []
+
+  for (const raw of Array.isArray(data) ? data : []) {
+    const vessel = normalizeVessel(raw)
+    if (!vessel || seen.has(vessel.id)) continue
+    seen.add(vessel.id)
+    result.push(vessel)
+    if (result.length >= MAX_TRACKED_VESSELS) break
+  }
+
+  return result
+}
 
 /**
  * Custom hook for vessel data management.
@@ -23,17 +61,22 @@ export default function useVessels() {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch('/api/vessels/enriched')
+      const params = new URLSearchParams({
+        limit: String(INITIAL_VESSEL_LIMIT),
+        active_minutes: String(ACTIVE_POSITION_MINUTES),
+        include_unregistered: 'true',
+      })
+      const response = await fetch(`/api/vessels/enriched?${params}`)
       if (!response.ok) throw new Error('Backend unavailable')
       const data = await response.json()
 
       // The enriched endpoint returns a flat JSON array — exactly
       // the shape our components expect.
-      setVessels(data)
+      setVessels(normalizeVessels(data))
     } catch {
       // Fallback to mock data
       console.log('[Vessels] Using mock data (backend unavailable)')
-      setVessels(MOCK_VESSELS)
+      setVessels(normalizeVessels(MOCK_VESSELS))
     } finally {
       setLoading(false)
     }
@@ -54,6 +97,8 @@ export default function useVessels() {
       })
 
       Object.entries(livePositions).forEach(([key, update]) => {
+        if (!isFiniteCoordinate(update.lat) || !isFiniteCoordinate(update.lon)) return
+
         // Try to find index of existing vessel by MMSI or IMO
         let idx = mmsiToVesselIdx[key] ?? imoToVesselIdx[key]
         
@@ -62,8 +107,8 @@ export default function useVessels() {
           next[idx] = {
             ...next[idx],
             position: {
-              lat: update.lat,
-              lon: update.lon,
+              lat: Number(update.lat),
+              lon: Number(update.lon),
             },
             heading: update.heading ?? next[idx].heading,
             speed: update.speed ?? next[idx].speed,
@@ -73,7 +118,7 @@ export default function useVessels() {
           // It's a new vessel not currently in the state! Synthesize it
           const mmsiVal = isNaN(Number(key)) ? null : String(key)
           // Avoid adding duplicates during the loop
-          if (mmsiVal && mmsiToVesselIdx[mmsiVal] === undefined) {
+          if (mmsiVal && mmsiToVesselIdx[mmsiVal] === undefined && next.length < MAX_TRACKED_VESSELS) {
             const newVessel = {
               id: mmsiVal,
               imo: null,
@@ -84,8 +129,8 @@ export default function useVessels() {
               riskScore: 0,
               riskFactors: [],
               position: {
-                lat: update.lat,
-                lon: update.lon,
+                lat: Number(update.lat),
+                lon: Number(update.lon),
               },
               heading: update.heading ?? 0,
               speed: update.speed ?? 0,
@@ -108,6 +153,23 @@ export default function useVessels() {
     })
   }, [livePositions])
 
+  const searchIndex = useMemo(() => {
+    return vessels.map((vessel) => ({
+      vessel,
+      text: [
+        vessel.name,
+        vessel.imo,
+        vessel.mmsi,
+        vessel.type,
+        vessel.flag?.name,
+        vessel.destination,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase(),
+    }))
+  }, [vessels])
+
   // ── Search with debounce ───────────────────────────────────
   const searchVessels = useCallback(
     (query) => {
@@ -120,19 +182,16 @@ export default function useVessels() {
 
       searchTimerRef.current = setTimeout(() => {
         const q = query.toLowerCase().trim()
-        const results = vessels.filter(
-          (v) =>
-            v.name?.toLowerCase().includes(q) ||
-            String(v.imo).toLowerCase().includes(q) ||
-            String(v.mmsi).includes(q) ||
-            v.type?.toLowerCase().includes(q) ||
-            v.flag?.name?.toLowerCase().includes(q) ||
-            v.destination?.toLowerCase().includes(q)
-        )
+        const results = []
+        for (const entry of searchIndex) {
+          if (!entry.text.includes(q)) continue
+          results.push(entry.vessel)
+          if (results.length >= MAX_SEARCH_RESULTS) break
+        }
         setSearchResults(results)
       }, 300)
     },
-    [vessels]
+    [searchIndex]
   )
 
   // ── Select vessel ──────────────────────────────────────────

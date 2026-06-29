@@ -1,5 +1,29 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
+const MAX_PENDING_UPDATES = 1500
+
+function isFiniteCoordinate(value) {
+  return Number.isFinite(Number(value))
+}
+
+function queuePositionUpdate(pendingUpdatesRef, keyValue, update) {
+  const key = keyValue != null ? String(keyValue) : ''
+  const lat = update.lat ?? update.latitude
+  const lon = update.lon ?? update.longitude
+
+  if (!key || key === 'undefined' || !isFiniteCoordinate(lat) || !isFiniteCoordinate(lon)) {
+    return
+  }
+
+  pendingUpdatesRef.current[key] = {
+    lat: Number(lat),
+    lon: Number(lon),
+    heading: update.heading,
+    speed: update.speed,
+    timestamp: update.timestamp || update.time || new Date().toISOString(),
+  }
+}
+
 /**
  * WebSocket hook for live vessel position updates.
  *
@@ -17,6 +41,7 @@ export default function useWebSocket(url) {
   const reconnectTimeoutRef = useRef(null)
   const reconnectAttemptsRef = useRef(0)
   const maxReconnectDelay = 30000
+  const pendingUpdatesRef = useRef({})
 
   const wsUrl =
     url ||
@@ -45,50 +70,19 @@ export default function useWebSocket(url) {
           // Backend broadcasts: { type: "position_update", data: { mmsi, latitude, longitude, ... } }
           if (msg.type === 'position_update' && msg.data) {
             const d = msg.data
-            const key = String(d.mmsi || d.imo)
-            setPositions((prev) => ({
-              ...prev,
-              [key]: {
-                lat: d.latitude,
-                lon: d.longitude,
-                heading: d.heading,
-                speed: d.speed,
-                timestamp: d.time || new Date().toISOString(),
-              },
-            }))
+            queuePositionUpdate(pendingUpdatesRef, d.mmsi || d.imo, d)
           }
 
           // Also support batch format: { type: "position_update", vessels: [...] }
           if (msg.type === 'position_update' && Array.isArray(msg.vessels)) {
-            setPositions((prev) => {
-              const next = { ...prev }
-              for (const v of msg.vessels) {
-                const key = String(v.mmsi || v.imo)
-                next[key] = {
-                  lat: v.lat ?? v.latitude,
-                  lon: v.lon ?? v.longitude,
-                  heading: v.heading,
-                  speed: v.speed,
-                  timestamp: v.timestamp || v.time || new Date().toISOString(),
-                }
-              }
-              return next
-            })
+            for (const v of msg.vessels) {
+              queuePositionUpdate(pendingUpdatesRef, v.mmsi || v.imo, v)
+            }
           }
 
           // Single update shorthand: { type: "single_update", mmsi, lat, lon, ... }
           if (msg.type === 'single_update') {
-            const key = String(msg.mmsi || msg.imo)
-            setPositions((prev) => ({
-              ...prev,
-              [key]: {
-                lat: msg.lat ?? msg.latitude,
-                lon: msg.lon ?? msg.longitude,
-                heading: msg.heading,
-                speed: msg.speed,
-                timestamp: msg.timestamp || new Date().toISOString(),
-              },
-            }))
+            queuePositionUpdate(pendingUpdatesRef, msg.mmsi || msg.imo, msg)
           }
         } catch {
           // Ignore malformed messages
@@ -109,7 +103,7 @@ export default function useWebSocket(url) {
         }, delay)
       }
 
-      ws.onerror = (e) => {
+      ws.onerror = () => {
         setError('WebSocket connection error')
         ws.close()
       }
@@ -130,6 +124,27 @@ export default function useWebSocket(url) {
       }
     }
   }, [connect])
+
+  // Flush accumulated live position updates to state every 2 seconds to prevent rendering lag
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const pending = pendingUpdatesRef.current
+      const entries = Object.entries(pending)
+      if (entries.length === 0) return
+
+      const cappedEntries =
+        entries.length > MAX_PENDING_UPDATES
+          ? entries
+              .sort((a, b) => String(b[1].timestamp).localeCompare(String(a[1].timestamp)))
+              .slice(0, MAX_PENDING_UPDATES)
+          : entries
+
+      setPositions(Object.fromEntries(cappedEntries))
+      pendingUpdatesRef.current = {}
+    }, 2000)
+
+    return () => clearInterval(interval)
+  }, [])
 
   return { positions, isConnected, error }
 }

@@ -151,7 +151,7 @@ class AISAnomalyDetector:
                     "type": "duplicate_mmsi"
                 })
         except Exception as e:
-            print(f"Error checking duplicate MMSI: {e}")
+            logger.error(f"Error checking duplicate MMSI: {e}")
 
         return anomalies
 

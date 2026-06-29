@@ -23,7 +23,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # ── Extensions (PostGIS only — no TimescaleDB on Supabase) ─────
-    op.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
+    # op.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
 
     # ── vessels ────────────────────────────────────────────────────
     op.create_table(

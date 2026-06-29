@@ -9,12 +9,15 @@ Identifies potential Ship-to-Ship cargo transfers at sea:
 """
 
 from datetime import datetime, timedelta, timezone
+import logging
 from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sts_event import STSEvent
+
+logger = logging.getLogger(__name__)
 
 
 class STSTransferDetector:
@@ -110,7 +113,7 @@ class STSTransferDetector:
 
         except Exception as e:
             # Fallback if PostGIS tables or database is empty / not initialized with proper functions
-            print(f"Error executing STS detection query: {e}")
+            logger.error(f"Error executing STS detection query: {e}")
 
         return sts_events
 

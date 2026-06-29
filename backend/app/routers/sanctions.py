@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectin_polymorphic, selectinload
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.models.sanctions import SanctionsEntry, SanctionsMatch

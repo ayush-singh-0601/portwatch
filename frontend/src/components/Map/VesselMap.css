@@ -9,6 +9,23 @@
   background: var(--bg-deep);
 }
 
+.vessel-marker {
+  background: transparent;
+  border: 0;
+}
+
+.vessel-icon-shell {
+  width: var(--vessel-size);
+  height: var(--vessel-size);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--vessel-color), transparent 35%));
+  transform-origin: center;
+  transition: transform 160ms linear;
+}
+
+.vessel-marker-selected .vessel-icon-shell {
+  filter: drop-shadow(0 0 8px var(--vessel-color));
+}
+
 /* Vessel marker popup overrides */
 .leaflet-popup-content-wrapper {
   background: var(--bg-glass) !important;

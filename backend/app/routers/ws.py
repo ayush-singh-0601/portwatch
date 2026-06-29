@@ -77,6 +77,35 @@ class ConnectionManager:
         if client is not None:
             client.bbox = bbox
 
+    @staticmethod
+    def _position_in_bbox(position_data: dict, bbox: list[float]) -> bool:
+        lat = position_data.get("latitude", position_data.get("lat"))
+        lon = position_data.get("longitude", position_data.get("lon"))
+        if lat is None or lon is None:
+            return True
+
+        min_lon, min_lat, max_lon, max_lat = bbox
+        return min_lat <= lat <= max_lat and min_lon <= lon <= max_lon
+
+    def _filter_payload_for_client(self, payload: dict, client: ClientConnection) -> dict | None:
+        if client.bbox is None:
+            return payload
+
+        if payload.get("type") == "position_update" and isinstance(payload.get("data"), dict):
+            return payload if self._position_in_bbox(payload["data"], client.bbox) else None
+
+        if payload.get("type") == "position_update" and isinstance(payload.get("vessels"), list):
+            vessels = [
+                vessel
+                for vessel in payload["vessels"]
+                if isinstance(vessel, dict) and self._position_in_bbox(vessel, client.bbox)
+            ]
+            if not vessels:
+                return None
+            return {**payload, "vessels": vessels}
+
+        return payload
+
     async def broadcast(self, position_data: dict) -> None:
         """Send a position update to all connected clients that match filters.
 
@@ -84,18 +113,13 @@ class ConnectionManager:
             position_data: Position dict with at least ``latitude`` and
                 ``longitude`` keys.
         """
-        lat = position_data.get("latitude")
-        lon = position_data.get("longitude")
-        message = json.dumps(position_data)
-
         disconnected: list[int] = []
 
         for ws_id, client in self._connections.items():
-            # Apply bounding box filter
-            if client.bbox is not None and lat is not None and lon is not None:
-                min_lon, min_lat, max_lon, max_lat = client.bbox
-                if not (min_lat <= lat <= max_lat and min_lon <= lon <= max_lon):
-                    continue
+            payload = self._filter_payload_for_client(position_data, client)
+            if payload is None:
+                continue
+            message = json.dumps(payload)
 
             try:
                 await client.websocket.send_text(message)

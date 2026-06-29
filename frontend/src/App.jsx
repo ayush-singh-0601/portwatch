@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import VesselMap from './components/Map/VesselMap'
 import VesselPanel from './components/VesselDetail/VesselPanel'
 import VesselSearch from './components/Search/VesselSearch'
 import Navbar from './components/common/Navbar'
 import Sidebar from './components/common/Sidebar'
+import LoadingSpinner from './components/common/LoadingSpinner'
 import useVessels from './hooks/useVessels'
 
 export default function App() {
@@ -47,11 +48,15 @@ export default function App() {
   }, [searchOpen, selectedVessel, clearSelection])
 
   // ── Filter vessels ─────────────────────────────────────────
-  const filteredVessels = vessels.filter((v) => {
-    if (!filters.types.includes(v.type)) return false
-    if (v.riskScore < filters.riskMin || v.riskScore > filters.riskMax) return false
-    return true
-  })
+  const filteredVessels = useMemo(() => {
+    const selectedTypes = new Set(filters.types)
+    return vessels.filter((v) => {
+      if (!selectedTypes.has(v.type)) return false
+      const riskScore = v.riskScore ?? 0
+      if (riskScore < filters.riskMin || riskScore > filters.riskMax) return false
+      return true
+    })
+  }, [vessels, filters])
 
   // ── Handlers ───────────────────────────────────────────────
   const handleVesselClick = useCallback(
@@ -108,6 +113,21 @@ export default function App() {
           onSelect={handleSearchSelect}
           onClose={() => setSearchOpen(false)}
         />
+      )}
+
+      {loading && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          top: '56px',
+          backgroundColor: 'var(--bg-deep)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <LoadingSpinner text="Fetching vessel telemetry..." />
+        </div>
       )}
     </>
   )

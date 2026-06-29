@@ -13,22 +13,19 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
   const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef(null)
   const listRef = useRef(null)
-  const debounceRef = useRef(null)
 
   // Auto-focus input on mount
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
-  // Debounced search
+  // Search immediately (useVessels hook handles debouncing)
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
     if (query.length >= 2) {
-      debounceRef.current = setTimeout(() => {
-        onSearch(query)
-      }, 300)
+      onSearch(query)
+    } else {
+      onSearch('')
     }
-    return () => clearTimeout(debounceRef.current)
   }, [query, onSearch])
 
   // Reset active index when results change
@@ -129,7 +126,7 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="40" height="40">
               <path d="M9.172 14.828a4 4 0 005.656 0M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p>No vessels found for "{query}"</p>
+            <p>No vessels found for &ldquo;{query}&rdquo;</p>
           </div>
         )}
 

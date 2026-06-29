@@ -3,6 +3,7 @@ import './Navbar.css'
 
 export default function Navbar({ vesselCount = 0, onSearchClick, onSidebarToggle }) {
   const [displayCount, setDisplayCount] = useState(0)
+  const [shortcutText, setShortcutText] = useState('⌘K')
 
   // Animated counter
   useEffect(() => {
@@ -16,6 +17,12 @@ export default function Navbar({ vesselCount = 0, onSearchClick, onSidebarToggle
     }, 30)
     return () => clearTimeout(timer)
   }, [displayCount, vesselCount])
+
+  // Detect platform for keyboard shortcut indicator
+  useEffect(() => {
+    const isMacPlatform = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || navigator.platform || '')
+    setShortcutText(isMacPlatform ? '⌘K' : 'Ctrl+K')
+  }, [])
 
   return (
     <nav className="navbar">
@@ -50,13 +57,13 @@ export default function Navbar({ vesselCount = 0, onSearchClick, onSidebarToggle
       </div>
 
       <div className="navbar-right">
-        <button className="navbar-search-btn" onClick={onSearchClick} title="Search vessels (Ctrl+K)">
+        <button className="navbar-search-btn" onClick={onSearchClick} title={`Search vessels (${shortcutText})`}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" strokeWidth="1.8"/>
             <path d="M12 12L16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
           </svg>
           <span className="navbar-search-label">Search</span>
-          <kbd className="navbar-kbd">⌘K</kbd>
+          <kbd className="navbar-kbd">{shortcutText}</kbd>
         </button>
 
         <button className="btn-icon btn-ghost navbar-icon-btn" title="Settings">

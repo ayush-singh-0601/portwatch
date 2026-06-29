@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+from contextlib import suppress
 from datetime import datetime, timezone
 from typing import Any
 
@@ -38,6 +39,10 @@ class AISIngestionService:
     def __init__(self) -> None:
         self.client: AISStreamClient | None = None
         self._running = False
+        self._pending_broadcasts: dict[str, dict[str, Any]] = {}
+        self._broadcast_task: asyncio.Task | None = None
+        self._broadcast_interval_seconds = 1.0
+        self._broadcast_max_batch = 1000
 
     async def start(self) -> None:
         """Start the live ingestion client in the background."""
@@ -68,7 +73,44 @@ class AISIngestionService:
         if self.client is not None:
             await self.client.disconnect()
             self.client = None
+        if self._broadcast_task is not None:
+            self._broadcast_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._broadcast_task
+            self._broadcast_task = None
+        self._pending_broadcasts.clear()
         logger.info("AISIngestionService background worker stopped")
+
+    def _queue_position_broadcast(self, payload: dict[str, Any]) -> None:
+        """Queue latest positions and send them to browsers in short batches."""
+        if manager.active_connections == 0:
+            return
+
+        mmsi = payload.get("mmsi")
+        if mmsi is None:
+            return
+
+        self._pending_broadcasts[str(mmsi)] = payload
+        if self._broadcast_task is None or self._broadcast_task.done():
+            self._broadcast_task = asyncio.create_task(self._flush_position_broadcasts())
+
+    async def _flush_position_broadcasts(self) -> None:
+        await asyncio.sleep(self._broadcast_interval_seconds)
+
+        pending = self._pending_broadcasts
+        self._pending_broadcasts = {}
+        if not pending or manager.active_connections == 0:
+            return
+
+        vessels = sorted(
+            pending.values(),
+            key=lambda item: item.get("time") or "",
+            reverse=True,
+        )[:self._broadcast_max_batch]
+        await manager.broadcast({
+            "type": "position_update",
+            "vessels": vessels,
+        })
 
     async def handle_message(self, raw_data: dict[str, Any]) -> None:
         """Process a decoded NMEA message received from the live feed."""
@@ -108,19 +150,16 @@ class AISIngestionService:
                     await db.execute(stmt)
                     await db.commit()
 
-                # Broadcast current position live to Map WebSocket clients
-                await manager.broadcast({
-                    "type": "position_update",
-                    "data": {
-                        "mmsi": pos_data.mmsi,
-                        "latitude": pos_data.latitude,
-                        "longitude": pos_data.longitude,
-                        "speed": pos_data.speed,
-                        "course": pos_data.course,
-                        "heading": pos_data.heading,
-                        "nav_status": pos_data.nav_status,
-                        "time": time_val.isoformat(),
-                    }
+                # Queue live updates so real AIS volume does not flood browsers.
+                self._queue_position_broadcast({
+                    "mmsi": pos_data.mmsi,
+                    "latitude": pos_data.latitude,
+                    "longitude": pos_data.longitude,
+                    "speed": pos_data.speed,
+                    "course": pos_data.course,
+                    "heading": pos_data.heading,
+                    "nav_status": pos_data.nav_status,
+                    "time": time_val.isoformat(),
                 })
 
             # ── 2. Handle Vessel Static Identity Updates ──────────────────
@@ -286,7 +325,7 @@ async def populate_vessel_analytics(db: Any, vessel: Vessel) -> None:
                 s_entry = SanctionsEntry(
                     source=random.choice(["OFAC", "EU", "UN"]),
                     entity_name=s_name,
-                    created_at=datetime.now(timezone.utc),
+                    last_updated=datetime.now(timezone.utc),
                 )
                 db.add(s_entry)
                 await db.flush()
