@@ -9,14 +9,22 @@ Implements algorithms to identify periods of AIS silence (dark events):
 
 from datetime import datetime, timedelta, timezone
 import json
+import logging
 import os
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.position import VesselPosition as Position
 from app.models.dark_event import DarkEvent
+from app.models.port import Port
+from app.models.position import VesselPosition as Position
+from app.utils.geo import NM_TO_KM, haversine_distance
+
+logger = logging.getLogger(__name__)
+
+# Coastal proximity threshold: 50 nautical miles in km
+_COASTAL_RADIUS_KM: float = 50.0 * NM_TO_KM
 
 # Default dead zones if GeoJSON is not present
 DEFAULT_DEAD_ZONES = []
@@ -171,9 +179,71 @@ class DarkVesselDetector:
         return dark_events
 
     async def _is_coastal_position(self, lat: float, lon: float) -> bool:
-        """Determine if a point is close to the coast/ports (within 50nm).
-        
-        As a fallback when port geofence coordinates are not loaded, we default to
-        returning True (treating gaps within standard terrestrial ranges as coastal).
+        """Determine if a point is within 50 nm of any known port.
+
+        Algorithm:
+        1. Try PostGIS ST_DWithin on the ports table (fast, index-backed).
+        2. If PostGIS is unavailable, fall back to a Python haversine scan.
+        3. If the ports table is empty, log a warning and return True (the
+           original conservative default) so no dark events are silently lost.
+
+        Args:
+            lat: WGS-84 latitude of the position.
+            lon: WGS-84 longitude of the position.
+
+        Returns:
+            True if within 50 nm of any port, False otherwise.
         """
-        return True
+        try:
+            # ── Attempt PostGIS geography query (metres) ───────────────────
+            from sqlalchemy import text as sa_text
+            radius_m = _COASTAL_RADIUS_KM * 1000.0
+            postgis_q = sa_text(
+                """
+                SELECT 1 FROM ports
+                WHERE ST_DWithin(
+                    ST_SetSRID(ST_Point(longitude, latitude), 4326)::geography,
+                    ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography,
+                    :radius_m
+                )
+                LIMIT 1
+                """
+            )
+            result = await self.db.execute(postgis_q, {"lat": lat, "lon": lon, "radius_m": radius_m})
+            row = result.fetchone()
+            if row is not None:
+                return True
+            # PostGIS returned a result (even None) — query succeeded.
+            # Check count to distinguish "no nearby port" from "empty table".
+            count_result = await self.db.execute(select(func.count()).select_from(Port))
+            count = count_result.scalar() or 0
+            if count == 0:
+                logger.warning(
+                    "_is_coastal_position: ports table is empty — defaulting to True (coastal). "
+                    "Populate the ports table for accurate open-ocean dark event detection."
+                )
+                return True
+            return False
+
+        except Exception:
+            # PostGIS not available — fall back to Python haversine scan
+            pass
+
+        try:
+            ports_result = await self.db.execute(select(Port.latitude, Port.longitude))
+            port_coords = ports_result.all()
+        except Exception as exc:
+            logger.error("_is_coastal_position: failed to query ports table: %s", exc)
+            return True  # safe default
+
+        if not port_coords:
+            logger.warning(
+                "_is_coastal_position: ports table is empty — defaulting to True (coastal). "
+                "Populate the ports table for accurate open-ocean dark event detection."
+            )
+            return True
+
+        for (p_lat, p_lon) in port_coords:
+            if haversine_distance(lat, lon, p_lat, p_lon) <= _COASTAL_RADIUS_KM:
+                return True
+        return False
