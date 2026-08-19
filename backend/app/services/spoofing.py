@@ -32,7 +32,19 @@ _RISK_ZONE_RADIUS_KM: float = 30.0 * NM_TO_KM
 
 
 class AISAnomalyDetector:
-    """Detector for AIS spoofing, duplicate MMSIs, and vessel loitering."""
+    """Detector for AIS spoofing, duplicate MMSIs, and vessel loitering.
+
+    Detection methods:
+    - ``detect_speed_spoofing``: impossible speed jumps (> 50 kts default).
+    - ``detect_duplicate_mmsi``: same MMSI appearing > 1,000 km apart within
+      a short time window — requires PostGIS on the database.
+    - ``detect_loitering``: sustained low speed (≤ 2 kts, ≥ 4 h) near a
+      sanctioned port or ship-breaking yard.  Risk-zone proximity is evaluated
+      by ``_is_near_risk_zone``, which checks five hard-coded ship-breaking
+      yard constants plus any ports in the ``ports`` reference table whose
+      country is in the sanctioned list.
+    """
+
 
     def __init__(self, db: AsyncSession):
         self.db = db
