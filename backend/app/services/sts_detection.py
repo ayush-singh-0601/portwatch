@@ -12,12 +12,17 @@ from datetime import datetime, timedelta, timezone
 import logging
 from typing import Optional
 
-from sqlalchemy import text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.port import Port
 from app.models.sts_event import STSEvent
+from app.utils.geo import haversine_distance
 
 logger = logging.getLogger(__name__)
+
+# Port-limit proximity threshold: 5 km
+_PORT_LIMIT_RADIUS_KM: float = 5.0
 
 
 class STSTransferDetector:
@@ -127,7 +132,72 @@ class STSTransferDetector:
         return row[0] if row else None
 
     async def _check_in_port_limits(self, lat: float, lon: float) -> bool:
-        """Determine if the coordinates are within designated port limits."""
-        # port_calls table has no longitude/latitude columns; returning False
-        # until a proper ports/geofence table with coordinates is available.
+        """Determine if coordinates are within designated port limits (5 km).
+
+        Algorithm:
+        1. Try PostGIS ST_DWithin on the ports table for speed.
+        2. Fall back to a Python haversine scan if PostGIS is unavailable.
+        3. If the ports table is empty, log a warning and return False (the
+           original conservative default) — STS events are then assumed to
+           be off-port-limits, which errs on the side of higher risk.
+
+        Args:
+            lat: WGS-84 latitude.
+            lon: WGS-84 longitude.
+
+        Returns:
+            True if within 5 km of any known port, False otherwise.
+        """
+        radius_m = _PORT_LIMIT_RADIUS_KM * 1000.0
+
+        try:
+            # ── Attempt PostGIS geography query ────────────────────────────
+            postgis_q = text(
+                """
+                SELECT 1 FROM ports
+                WHERE ST_DWithin(
+                    ST_SetSRID(ST_Point(longitude, latitude), 4326)::geography,
+                    ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography,
+                    :radius_m
+                )
+                LIMIT 1
+                """
+            )
+            result = await self.db.execute(postgis_q, {"lat": lat, "lon": lon, "radius_m": radius_m})
+            row = result.fetchone()
+            if row is not None:
+                return True
+            # Query succeeded — confirm table isn't just empty
+            count_result = await self.db.execute(select(func.count()).select_from(Port))
+            count = count_result.scalar() or 0
+            if count == 0:
+                logger.warning(
+                    "_check_in_port_limits: ports table is empty — defaulting to False "
+                    "(off-port-limits). Populate the ports table for accurate STS filtering."
+                )
+                return False
+            return False
+
+        except Exception:
+            # PostGIS unavailable — fall back to haversine scan
+            pass
+
+        try:
+            ports_result = await self.db.execute(select(Port.latitude, Port.longitude))
+            port_coords = ports_result.all()
+        except Exception as exc:
+            logger.error("_check_in_port_limits: failed to query ports table: %s", exc)
+            return False
+
+        if not port_coords:
+            logger.warning(
+                "_check_in_port_limits: ports table is empty — defaulting to False "
+                "(off-port-limits). Populate the ports table for accurate STS filtering."
+            )
+            return False
+
+        for (p_lat, p_lon) in port_coords:
+            if haversine_distance(lat, lon, p_lat, p_lon) <= _PORT_LIMIT_RADIUS_KM:
+                return True
         return False
+
