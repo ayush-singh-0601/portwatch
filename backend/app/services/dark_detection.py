@@ -83,7 +83,17 @@ def point_in_polygon(x: float, y: float, poly: list[list[float]]) -> bool:
 
 
 class DarkVesselDetector:
-    """Detector for periods of suspicious AIS transmitter disabling."""
+    """Detector for periods of suspicious AIS transmitter disabling.
+
+    Dark events are classified by zone type:
+    - **coastal** (threshold 6 h): vessel was within 50 nm of a known port at
+      the start of the gap, as determined by ``_is_coastal_position``.
+    - **open_ocean** (threshold 24 h): vessel was beyond 50 nm of any port.
+
+    Zone classification uses PostGIS ``ST_DWithin`` when available and falls
+    back to a Python haversine scan.  When the ``ports`` table is empty the
+    conservative default (coastal / 6 h) is applied and a warning is logged.
+    """
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -92,8 +102,12 @@ class DarkVesselDetector:
     async def detect_dark_events(
         self, vessel_imo: int, mmsi: int
     ) -> list[DarkEvent]:
-        """Analyze position history for a vessel to find transmission gaps.
-        
+        """Analyse position history for a vessel to find AIS transmission gaps.
+
+        Each gap is classified as coastal (< 50 nm from a port, threshold 6 h)
+        or open_ocean (>= 50 nm from all ports, threshold 24 h).  Gaps starting
+        inside a configured AIS dead zone are excluded.
+
         Saves new dark events and returns the list of detected events.
         """
         # Fetch all positions for the vessel sorted chronologically
