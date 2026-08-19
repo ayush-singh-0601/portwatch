@@ -9,34 +9,17 @@ Implements maritime anomaly detection:
 
 from datetime import datetime, timedelta
 import logging
-import math
 from typing import Optional
+
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.position import VesselPosition as Position
 from app.models.vessel import Vessel
+from app.utils.geo import haversine_distance  # noqa: F401 – re-used below
 
 logger = logging.getLogger(__name__)
-
-def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Calculate the great-circle distance between two points in kilometers.
-    
-    Uses the Haversine formula.
-    """
-    R = 6371.0  # Earth radius in km
-    
-    phi1 = math.radians(lat1)
-    phi2 = math.radians(lat2)
-    delta_phi = math.radians(lat2 - lat1)
-    delta_lambda = math.radians(lon2 - lon1)
-    
-    a = (math.sin(delta_phi / 2.0) ** 2 +
-         math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2.0) ** 2)
-    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
-    
-    return R * c
 
 
 class AISAnomalyDetector:
