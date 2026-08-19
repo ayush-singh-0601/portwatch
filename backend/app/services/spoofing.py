@@ -11,15 +11,24 @@ from datetime import datetime, timedelta
 import logging
 from typing import Optional
 
-
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.port import Port
 from app.models.position import VesselPosition as Position
 from app.models.vessel import Vessel
-from app.utils.geo import haversine_distance  # noqa: F401 – re-used below
+from app.utils.geo import NM_TO_KM, SHIP_BREAKING_YARDS, haversine_distance
 
 logger = logging.getLogger(__name__)
+
+# Sanctioned port countries (mirrors risk_scoring.py — single source of truth
+# kept here to avoid a circular import)
+_SANCTIONED_PORT_COUNTRIES: frozenset[str] = frozenset({
+    "IRN", "PRK", "CUB", "SYR", "VEN", "RUS",
+})
+
+# Default loitering risk-zone radius: 30 nautical miles
+_RISK_ZONE_RADIUS_KM: float = 30.0 * NM_TO_KM
 
 
 class AISAnomalyDetector:
@@ -210,8 +219,56 @@ class AISAnomalyDetector:
         return loitering_events
 
     async def _is_near_risk_zone(self, lat: float, lon: float) -> bool:
-        """Check if coordinates are near high-risk/sanctioned ports or ship breaking yards."""
-        # port_calls table has no longitude/latitude columns; returning False
-        # until a proper ports/geofence table with coordinates is available.
-        logger.debug("_is_near_risk_zone: skipped – port_calls has no coordinate columns")
+        """Check if coordinates are near a high-risk/sanctioned port or ship-breaking yard.
+
+        Two independent checks are performed (either is sufficient to return True):
+
+        1. **Ship-breaking yards** — five hard-coded yard coordinates stored as
+           constants in ``utils.geo.SHIP_BREAKING_YARDS``.  No database query
+           required; always works even when the ports table is empty.
+        2. **Sanctioned ports** — any port in the ``ports`` table whose
+           ``country`` is in the ``_SANCTIONED_PORT_COUNTRIES`` set and is
+           within *_RISK_ZONE_RADIUS_KM* of the supplied coordinates.
+
+        If the ports table is empty, only check (1) is performed and a warning
+        is logged so operators know to populate the table for full coverage.
+
+        Args:
+            lat: WGS-84 latitude.
+            lon: WGS-84 longitude.
+
+        Returns:
+            True if within range of any known risk zone, False otherwise.
+        """
+        # ── 1. Ship-breaking yards (always checked, no DB) ────────────────
+        for _yard_name, yard_lat, yard_lon in SHIP_BREAKING_YARDS:
+            if haversine_distance(lat, lon, yard_lat, yard_lon) <= _RISK_ZONE_RADIUS_KM:
+                return True
+
+        # ── 2. Sanctioned ports from the ports reference table ─────────────
+        try:
+            result = await self.db.execute(
+                select(Port.latitude, Port.longitude)
+                .where(Port.country.in_(_SANCTIONED_PORT_COUNTRIES))
+            )
+            sanctioned_ports = result.all()
+        except Exception as exc:
+            logger.error("_is_near_risk_zone: failed to query ports table: %s", exc)
+            return False
+
+        if not sanctioned_ports:
+            count_result = await self.db.execute(select(func.count()).select_from(Port))
+            total = count_result.scalar() or 0
+            if total == 0:
+                logger.warning(
+                    "_is_near_risk_zone: ports table is empty — only ship-breaking yard "
+                    "constants were checked. Populate the ports table for sanctioned-port "
+                    "proximity detection."
+                )
+            return False
+
+        for (p_lat, p_lon) in sanctioned_ports:
+            if haversine_distance(lat, lon, p_lat, p_lon) <= _RISK_ZONE_RADIUS_KM:
+                return True
         return False
+
