@@ -26,7 +26,14 @@ _PORT_LIMIT_RADIUS_KM: float = 5.0
 
 
 class STSTransferDetector:
-    """Detector for suspicious Ship-to-Ship transfer events using spatial queries."""
+    """Detector for suspicious Ship-to-Ship transfer events using spatial queries.
+
+    Port-limit check (``_check_in_port_limits``) uses a 5 km radius around
+    each entry in the ``ports`` reference table.  PostGIS ``ST_DWithin`` is
+    tried first; a Python haversine scan is used as fallback when PostGIS is
+    unavailable.  When the ``ports`` table is empty, all STS events are
+    conservatively reported as off-port-limits and a warning is logged.
+    """
 
     def __init__(self, db: AsyncSession):
         self.db = db
