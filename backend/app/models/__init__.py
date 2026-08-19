@@ -9,6 +9,7 @@ up all tables when generating migrations.
 from app.models.base import Base
 from app.models.dark_event import DarkEvent
 from app.models.ownership import OwnershipEdge, OwnershipEntity
+from app.models.port import Port
 from app.models.port_call import PortCall
 from app.models.position import VesselPosition
 from app.models.risk_score import RiskFactor, RiskScore
@@ -21,6 +22,7 @@ __all__ = [
     "DarkEvent",
     "OwnershipEdge",
     "OwnershipEntity",
+    "Port",
     "PortCall",
     "RiskFactor",
     "RiskScore",
