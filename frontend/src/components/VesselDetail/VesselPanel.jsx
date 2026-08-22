@@ -60,10 +60,12 @@ export default function VesselPanel({ vessel, onClose }) {
       <hr className="divider" />
 
       {/* Tabs */}
-      <div className="tab-bar">
+      <div className="tab-bar" role="tablist" aria-label="Vessel detail sections">
         {TABS.map((tab) => (
           <button
             key={tab}
+            role="tab"
+            aria-selected={activeTab === tab}
             className={`tab-bar-item ${activeTab === tab ? 'active' : ''}`}
             onClick={() => setActiveTab(tab)}
           >
@@ -91,11 +93,15 @@ export default function VesselPanel({ vessel, onClose }) {
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">Speed</span>
-                  <span className="mono">{vessel.speed?.toFixed(1)} kn</span>
+                  <span className="mono">
+                    {vessel.speed != null ? vessel.speed.toFixed(1) : '—'} kn
+                  </span>
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">Heading</span>
-                  <span className="mono">{vessel.heading}°</span>
+                  <span className="mono">
+                    {vessel.heading != null ? vessel.heading : '—'}°
+                  </span>
                 </div>
               </div>
             </div>
@@ -133,7 +139,7 @@ export default function VesselPanel({ vessel, onClose }) {
                   <span className="label">ETA</span>
                   <span className="mono">
                     {vessel.eta
-                      ? new Date(vessel.eta).toLocaleDateString('en-US', {
+                      ? new Date(vessel.eta).toLocaleString('en-US', {
                           month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
                         })
                       : '—'}
