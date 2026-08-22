@@ -180,7 +180,12 @@ export default function RiskBreakdown({ vessel }) {
       {/* Score header */}
       <div className="risk-breakdown-header">
         <div className="risk-breakdown-score-ring" style={{ '--ring-color': levelColor }}>
-          <svg viewBox="0 0 80 80" className="risk-breakdown-svg">
+          <svg
+            viewBox="0 0 80 80"
+            className="risk-breakdown-svg"
+            role="img"
+            aria-label={`Risk score ${score} out of 100 — ${levelLabel}`}
+          >
             <circle
               cx="40" cy="40" r="34"
               fill="none"
