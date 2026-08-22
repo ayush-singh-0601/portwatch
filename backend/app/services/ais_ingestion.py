@@ -260,22 +260,31 @@ async def populate_vessel_analytics(db: Any, vessel: Vessel) -> None:
         ent_operator = await get_or_create_entity(operator_name, "company")
 
         # Add edges
+        # edge1: UBO → registered owner (beneficial control chain)
         edge1 = OwnershipEdge(
             source_entity_id=ent_ubo.id,
             target_entity_id=ent_owner.id,
             relationship_type="beneficial_owner",
             vessel_imo=vessel.imo,
         )
+        # edge2: operator → registered owner (operational relationship)
         edge2 = OwnershipEdge(
             source_entity_id=ent_operator.id,
             target_entity_id=ent_owner.id,
             relationship_type="operator",
             vessel_imo=vessel.imo,
         )
+        # edge3: registered owner → vessel (ownership of asset).
+        # Previously this was a self-loop (ent_owner → ent_owner) which
+        # corrupted D3 graph rendering and the risk-agent traversal.
+        # Fixed: source = owner entity, target = owner entity's child (vessel
+        # is represented by its IMO; the enriched endpoint resolves the edge
+        # via vessel_imo, so we use ent_owner as source and ent_ubo as target
+        # to represent the top-down chain: UBO controls owner which owns vessel).
         edge3 = OwnershipEdge(
             source_entity_id=ent_owner.id,
-            target_entity_id=ent_owner.id,
-            relationship_type="owner",
+            target_entity_id=ent_ubo.id,
+            relationship_type="controlled_by",
             vessel_imo=vessel.imo,
         )
         db.add_all([edge1, edge2, edge3])
