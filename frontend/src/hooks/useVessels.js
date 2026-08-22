@@ -223,6 +223,19 @@ export default function useVessels() {
     fetchVessels()
   }, [fetchVessels])
 
+  // ── Keep selectedVessel in sync with live position updates ──
+  // When a WebSocket position arrives, `vessels` is updated in-place.
+  // Without this effect the detail panel keeps showing the stale
+  // heading/speed/position from the moment the vessel was clicked.
+  useEffect(() => {
+    if (!selectedVessel) return
+    const updated = vessels.find((v) => v.id === selectedVessel.id)
+    if (updated && updated !== selectedVessel) {
+      setSelectedVessel(updated)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vessels])
+
   // Cleanup
   useEffect(() => {
     return () => {
