@@ -84,10 +84,12 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
 
         {/* Results */}
         {results.length > 0 && (
-          <ul className="search-results" ref={listRef}>
+          <ul className="search-results" ref={listRef} role="listbox" aria-label="Vessel search results">
             {results.map((vessel, i) => (
               <li
                 key={vessel.id}
+                role="option"
+                aria-selected={i === activeIndex}
                 className={`search-result-item ${i === activeIndex ? 'active' : ''}`}
                 onClick={() => onSelect(vessel)}
                 onMouseEnter={() => setActiveIndex(i)}
