@@ -57,6 +57,38 @@ def _vessel_type_normalise(raw: str | None) -> str:
     return mapping.get(lower, "other")
 
 
+def _resolve_ownership_from_edges(edges: list) -> dict:
+    """Build an ownership dict from a list of OwnershipEdge ORM objects.
+
+    Iterates over all edges for a single vessel and maps relationship types
+    to the three display fields expected by the frontend.
+
+    Args:
+        edges: List of ``OwnershipEdge`` objects (already with loaded
+            ``source_entity`` and ``target_entity`` relationships).
+
+    Returns:
+        A dict with keys ``registeredOwner``, ``beneficialOwner``,
+        ``operator``, and ``flagHistory``.
+    """
+    result: dict = {
+        "registeredOwner": None,
+        "beneficialOwner": None,
+        "operator": None,
+        "flagHistory": [],
+    }
+    for edge in edges:
+        rel = (edge.relationship_type or "").lower()
+        entity_name = edge.target_entity.name if edge.target_entity else None
+        if "beneficial" in rel:
+            result["beneficialOwner"] = entity_name
+        elif "owner" in rel:
+            result["registeredOwner"] = entity_name
+        elif "operator" in rel or "manager" in rel:
+            result["operator"] = entity_name
+    return result
+
+
 @router.get(
     "/enriched",
     summary="Get all vessels with embedded position, risk, ownership, and sanctions",
@@ -157,25 +189,15 @@ async def get_enriched_vessels(
                 selectinload(OwnershipEdge.target_entity),
             )
         )
-        edges = list(edges_result.scalars().all())
+        all_edges = list(edges_result.scalars().all())
 
-        for edge in edges:
-            imo = edge.vessel_imo
-            if imo not in ownership_map:
-                ownership_map[imo] = {
-                    "registeredOwner": None,
-                    "beneficialOwner": None,
-                    "operator": None,
-                    "flagHistory": [],
-                }
-            rel = (edge.relationship_type or "").lower()
-            entity_name = edge.target_entity.name if edge.target_entity else None
-            if "owner" in rel and "beneficial" not in rel:
-                ownership_map[imo]["registeredOwner"] = entity_name
-            elif "beneficial" in rel:
-                ownership_map[imo]["beneficialOwner"] = entity_name
-            elif "operator" in rel or "manager" in rel:
-                ownership_map[imo]["operator"] = entity_name
+        # Group edges by vessel IMO then resolve with the shared helper.
+        edges_by_imo: dict[int, list] = {}
+        for edge in all_edges:
+            edges_by_imo.setdefault(edge.vessel_imo, []).append(edge)
+
+        for imo, vessel_edges in edges_by_imo.items():
+            ownership_map[imo] = _resolve_ownership_from_edges(vessel_edges)
 
     # ── 4. Assemble enriched response ─────────────────────────────
     enriched: list[dict] = []
@@ -188,8 +210,14 @@ async def get_enriched_vessels(
         # Position
         pos = latest_positions.get(vessel.mmsi) if vessel.mmsi else None
 
-        # Risk (latest score evaluated in Python)
-        risk = max(vessel.risk_scores, key=lambda x: x.id) if vessel.risk_scores else None
+        # Risk (latest score — ordered by when it was calculated, not by
+        # primary key, so a manually triggered recalculation is always preferred
+        # over an older score with a higher auto-increment id).
+        risk = (
+            max(vessel.risk_scores, key=lambda x: x.calculated_at)
+            if vessel.risk_scores
+            else None
+        )
         risk_score_val = risk.total_score if risk else 0
         risk_factors = []
         if risk and risk.factors:
