@@ -12,11 +12,19 @@ function roundedHeading(heading) {
   return Math.round(value / 10) * 10
 }
 
-function createVesselIcon(vesselType, heading, isSelected) {
+function riskBand(score) {
+  if (score >= 75) return 'critical'
+  if (score >= 50) return 'high'
+  if (score >= 25) return 'medium'
+  return 'low'
+}
+
+function createVesselIcon(vesselType, heading, isSelected, riskScore) {
   const color = getVesselColor(vesselType)
   const size = isSelected ? 30 : 22
   const rotation = roundedHeading(heading)
-  const cacheKey = `${vesselType}|${rotation}|${isSelected}`
+  const band = riskBand(riskScore ?? 0)
+  const cacheKey = `${vesselType}|${rotation}|${isSelected}|${band}`
   const cached = iconCache.get(cacheKey)
   if (cached) return cached
 
@@ -49,8 +57,8 @@ function VesselMarker({ vessel, isSelected, onClick }) {
   const lon = Number(vessel.position?.lon)
 
   const icon = useMemo(
-    () => createVesselIcon(vessel.type, vessel.heading, isSelected),
-    [vessel.type, vessel.heading, isSelected]
+    () => createVesselIcon(vessel.type, vessel.heading, isSelected, vessel.riskScore),
+    [vessel.type, vessel.heading, isSelected, vessel.riskScore]
   )
   const position = useMemo(() => [lat, lon], [lat, lon])
   const eventHandlers = useMemo(
