@@ -26,14 +26,16 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
 
   const handleRiskMinChange = useCallback(
     (e) => {
-      onFiltersChange({ ...filters, riskMin: Number(e.target.value) })
+      const val = Math.min(Number(e.target.value), filters.riskMax)
+      onFiltersChange({ ...filters, riskMin: val })
     },
     [filters, onFiltersChange]
   )
 
   const handleRiskMaxChange = useCallback(
     (e) => {
-      onFiltersChange({ ...filters, riskMax: Number(e.target.value) })
+      const val = Math.max(Number(e.target.value), filters.riskMin)
+      onFiltersChange({ ...filters, riskMax: val })
     },
     [filters, onFiltersChange]
   )
