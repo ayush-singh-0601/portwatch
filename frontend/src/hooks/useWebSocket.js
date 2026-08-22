@@ -125,21 +125,30 @@ export default function useWebSocket(url) {
     }
   }, [connect])
 
-  // Flush accumulated live position updates to state every 2 seconds to prevent rendering lag
+  // Flush accumulated live position updates to state every 2 seconds to prevent rendering lag.
+  // IMPORTANT: merge into existing state (spread `prev`) instead of replacing it entirely.
+  // A full replacement would silently drop every vessel that sent no update in the last 2 s,
+  // causing markers to flicker off the map until the next batch they appear in.
   useEffect(() => {
     const interval = setInterval(() => {
       const pending = pendingUpdatesRef.current
       const entries = Object.entries(pending)
       if (entries.length === 0) return
 
+      // When the batch is too large, keep only the most recent MAX_PENDING_UPDATES
+      // entries. Sort by proper Date comparison, not localeCompare, which can
+      // produce incorrect ordering for ISO strings of different lengths.
       const cappedEntries =
         entries.length > MAX_PENDING_UPDATES
           ? entries
-              .sort((a, b) => String(b[1].timestamp).localeCompare(String(a[1].timestamp)))
+              .sort((a, b) => new Date(b[1].timestamp) - new Date(a[1].timestamp))
               .slice(0, MAX_PENDING_UPDATES)
           : entries
 
-      setPositions(Object.fromEntries(cappedEntries))
+      setPositions((prev) => ({
+        ...prev,
+        ...Object.fromEntries(cappedEntries),
+      }))
       pendingUpdatesRef.current = {}
     }, 2000)
 
