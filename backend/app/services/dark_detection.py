@@ -65,7 +65,13 @@ def is_in_dead_zone(lat: float, lon: float, dead_zones: list[dict]) -> bool:
 
 
 def point_in_polygon(x: float, y: float, poly: list[list[float]]) -> bool:
-    """Ray casting algorithm for point-in-polygon test."""
+    """Ray casting algorithm for point-in-polygon test.
+
+    Uses the standard even-odd (ray casting) rule.  The intersection test
+    is only performed when the edge is non-horizontal (``p1y != p2y``),
+    which avoids reading ``xints`` from a previous loop iteration when a
+    horizontal edge is encountered.
+    """
     n = len(poly)
     inside = False
     p1x, p1y = poly[0]
@@ -74,10 +80,14 @@ def point_in_polygon(x: float, y: float, poly: list[list[float]]) -> bool:
         if y > min(p1y, p2y):
             if y <= max(p1y, p2y):
                 if x <= max(p1x, p2x):
+                    # Only test intersection for non-horizontal edges.
+                    # Horizontal edges (p1y == p2y) are collinear with the
+                    # ray and produce no crossing — skip them entirely so
+                    # `xints` is never referenced before assignment.
                     if p1y != p2y:
                         xints = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                    if p1x == p2x or x <= xints:
-                        inside = not inside
+                        if p1x == p2x or x <= xints:
+                            inside = not inside
         p1x, p1y = p2x, p2y
     return inside
 

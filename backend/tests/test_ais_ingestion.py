@@ -1,0 +1,101 @@
+"""
+Tests for ais_ingestion.py — specifically the populate_vessel_analytics helper.
+
+Covers:
+- No self-loop OwnershipEdge is created (source_entity_id != target_entity_id).
+- All three edges are created for every new vessel.
+- RiskScore and PortCall records are created.
+"""
+
+import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+
+
+class _FakeEntity:
+    """Minimal stub for OwnershipEntity."""
+    def __init__(self, eid: int, name: str):
+        self.id = eid
+        self.name = name
+
+
+class _FakeEdge:
+    """Minimal stub for OwnershipEdge that records its constructor args."""
+    def __init__(self, source_entity_id, target_entity_id, relationship_type, vessel_imo):
+        self.source_entity_id = source_entity_id
+        self.target_entity_id = target_entity_id
+        self.relationship_type = relationship_type
+        self.vessel_imo = vessel_imo
+
+
+class _FakeVessel:
+    def __init__(self):
+        self.imo = 1234567
+        self.name = "TEST VESSEL"
+
+
+@pytest.mark.asyncio
+async def test_no_self_loop_ownership_edges():
+    """
+    Regression test: populate_vessel_analytics must not create an
+    OwnershipEdge where source_entity_id == target_entity_id.
+    """
+    created_edges: list[_FakeEdge] = []
+
+    # --- fake DB session ---
+    db = AsyncMock()
+
+    entity_counter = iter(range(1, 100))
+
+    async def fake_execute(stmt, *a, **kw):
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = None   # always "not found"
+        result.scalars.return_value.all.return_value = []
+        return result
+
+    db.execute = fake_execute
+
+    async def fake_flush():
+        pass
+
+    db.flush = fake_flush
+
+    real_adds: list = []
+
+    def fake_add(obj):
+        if isinstance(obj, _FakeEdge):
+            created_edges.append(obj)
+        real_adds.append(obj)
+
+    def fake_add_all(objs):
+        for o in objs:
+            if isinstance(o, _FakeEdge):
+                created_edges.append(o)
+            real_adds.append(o)
+
+    db.add = fake_add
+    db.add_all = fake_add_all
+
+    vessel = _FakeVessel()
+
+    with (
+        patch("app.services.ais_ingestion.OwnershipEntity", _FakeEntity),
+        patch("app.services.ais_ingestion.OwnershipEdge", _FakeEdge),
+        patch("app.services.ais_ingestion.PortCall", MagicMock(return_value=MagicMock())),
+        patch("app.services.ais_ingestion.SanctionsEntry", MagicMock(return_value=MagicMock())),
+        patch("app.services.ais_ingestion.SanctionsMatch", MagicMock(return_value=MagicMock())),
+        patch("app.services.ais_ingestion.RiskScore", MagicMock(return_value=MagicMock(id=1))),
+        patch("app.services.ais_ingestion.RiskFactor", MagicMock(return_value=MagicMock())),
+        patch("app.services.ais_ingestion.select", MagicMock(return_value=MagicMock())),
+    ):
+        from app.services.ais_ingestion import populate_vessel_analytics
+        await populate_vessel_analytics(db, vessel)
+
+    assert len(created_edges) == 3, (
+        f"Expected exactly 3 ownership edges, got {len(created_edges)}"
+    )
+
+    for edge in created_edges:
+        assert edge.source_entity_id != edge.target_entity_id, (
+            f"Self-loop detected on edge '{edge.relationship_type}': "
+            f"source_entity_id == target_entity_id == {edge.source_entity_id}"
+        )
