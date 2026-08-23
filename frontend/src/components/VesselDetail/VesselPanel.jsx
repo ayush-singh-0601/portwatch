@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import RiskBadge from './RiskBadge'
 import RiskBreakdown from './RiskBreakdown'
 import IdentityCard from './IdentityCard'
@@ -13,7 +13,12 @@ export default function VesselPanel({ vessel, onClose }) {
 
   if (!vessel) return null
 
-  const timeSinceLastSeen = () => {
+  // Computed once per lastSeen change, not on every render.
+  // Without useMemo this Date.now() call ran on every 2-second WebSocket
+  // position flush that caused the panel to re-render via the selectedVessel
+  // sync effect in useVessels.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const timeSinceLastSeen = useMemo(() => {
     if (!vessel.lastSeen) return 'Unknown'
     const diff = Date.now() - new Date(vessel.lastSeen).getTime()
     const mins = Math.floor(diff / 60000)
@@ -22,7 +27,7 @@ export default function VesselPanel({ vessel, onClose }) {
     const hrs = Math.floor(mins / 60)
     if (hrs < 24) return `${hrs}h ago`
     return `${Math.floor(hrs / 24)}d ago`
-  }
+  }, [vessel.lastSeen])
 
   return (
     <div className="vessel-panel animate-slideRight">
@@ -147,7 +152,7 @@ export default function VesselPanel({ vessel, onClose }) {
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">Last Seen</span>
-                  <span>{timeSinceLastSeen()}</span>
+                  <span>{timeSinceLastSeen}</span>
                 </div>
               </div>
             </div>
