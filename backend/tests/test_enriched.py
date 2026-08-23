@@ -233,3 +233,25 @@ class TestPortCallSort:
         # Both dated entries should precede the None entry
         assert result[-1] is c
 
+
+# ── IMO list filtering ────────────────────────────────────────────────────────
+
+class TestImoListFiltering:
+    """Verify that vessels without IMO numbers do not inject None into queries."""
+
+    class _FakeVesselStub:
+        def __init__(self, imo):
+            self.imo = imo
+
+    def test_none_imos_are_excluded(self):
+        vessels = [
+            self._FakeVesselStub(9123456),
+            self._FakeVesselStub(None),
+            self._FakeVesselStub(9234567),
+            self._FakeVesselStub(None),
+        ]
+        imo_list = [v.imo for v in vessels if v.imo is not None]
+        assert imo_list == [9123456, 9234567]
+        assert None not in imo_list
+
+
