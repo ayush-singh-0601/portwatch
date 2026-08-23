@@ -10,6 +10,11 @@ Route::
 import logging
 from datetime import datetime, timedelta, timezone
 
+# Timezone-aware sentinel used as a sort fallback when arrival_time is None.
+# datetime.min.replace(tzinfo=timezone.utc) can raise OverflowError on some
+# Python builds; using a fixed epoch avoids that entirely.
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -259,7 +264,7 @@ async def get_enriched_vessels(
             # Sort by arrival time desc
             sorted_pcs = sorted(
                 vessel.port_calls,
-                key=lambda x: x.arrival_time if x.arrival_time else datetime.min.replace(tzinfo=timezone.utc),
+                key=lambda x: x.arrival_time if x.arrival_time else _EPOCH,
                 reverse=True
             )
             for pc in sorted_pcs:
