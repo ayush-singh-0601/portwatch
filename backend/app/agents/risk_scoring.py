@@ -251,12 +251,13 @@ class RiskScoringAgent:
         self, vessel: Vessel
     ) -> Optional[RiskFactor]:
         """Flag of convenience registry → +15."""
-        if vessel.flag and vessel.flag.upper() in FLAG_OF_CONVENIENCE:
+        if vessel.flag and vessel.flag.strip().upper() in FLAG_OF_CONVENIENCE:
+            flag_code = vessel.flag.strip().upper()
             return RiskFactor(
                 factor_name="flag_of_convenience",
                 points=15,
                 evidence_description=(
-                    f"Vessel registered under {vessel.flag}, which is on the "
+                    f"Vessel registered under {flag_code}, which is on the "
                     f"ITF Flag of Convenience list."
                 ),
             )
@@ -376,12 +377,13 @@ class RiskScoringAgent:
         self, vessel: Vessel
     ) -> Optional[RiskFactor]:
         """IMO high-risk flag state → +5."""
-        if vessel.flag and vessel.flag.upper() in HIGH_RISK_FLAG_STATES:
+        if vessel.flag and vessel.flag.strip().upper() in HIGH_RISK_FLAG_STATES:
+            flag_code = vessel.flag.strip().upper()
             return RiskFactor(
                 factor_name="high_risk_flag_state",
                 points=5,
                 evidence_description=(
-                    f"Vessel flagged to {vessel.flag}, on the Paris MoU "
+                    f"Vessel flagged to {flag_code}, on the Paris MoU "
                     f"grey/black list."
                 ),
             )
