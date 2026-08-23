@@ -314,7 +314,19 @@ class RiskScoringAgent:
     async def _check_identity_changes(
         self, vessel_imo: int, vessel: Vessel
     ) -> Optional[RiskFactor]:
-        """3+ name or flag changes → +10."""
+        """3+ name or flag changes → +10.
+
+        Uses OwnershipEdge count as a heuristic proxy for identity churn.
+
+        .. note::
+            ``populate_vessel_analytics`` always seeds **3 synthetic edges**
+            for every newly-registered vessel (beneficial_owner, operator,
+            controlled_by).  The threshold is therefore set to **>= 6** — i.e.
+            at least 3 edges *above* the synthetic baseline — so that a vessel
+            with only auto-created edges does not incorrectly score +10.
+        """
+        _SYNTHETIC_EDGE_BASELINE = 3  # edges created by populate_vessel_analytics
+        _CHANGE_THRESHOLD = _SYNTHETIC_EDGE_BASELINE + 3  # 6 total to flag churn
         try:
             result = await self.db.execute(
                 select(func.count())
@@ -322,13 +334,15 @@ class RiskScoringAgent:
                 .where(OwnershipEdge.vessel_imo == vessel_imo)
             )
             edge_count = result.scalar() or 0
-            # Heuristic: lots of ownership edges suggest frequent changes
-            if edge_count >= 3:
+            # Heuristic: edges beyond the 3 synthetic baseline suggest real
+            # ownership/identity restructuring events.
+            if edge_count >= _CHANGE_THRESHOLD:
                 return RiskFactor(
                     factor_name="identity_changes",
                     points=10,
                     evidence_description=(
-                        f"{edge_count} ownership/identity changes detected in vessel history."
+                        f"{edge_count} ownership/identity changes detected "
+                        f"(threshold: {_CHANGE_THRESHOLD}, baseline: {_SYNTHETIC_EDGE_BASELINE} auto-edges)."
                     ),
                 )
         except Exception:
