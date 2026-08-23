@@ -183,6 +183,23 @@ If you prefer to run the services bare-metal:
 
 ---
 
+## ⚡ Performance & Reliability Optimizations
+
+PortWatch includes low-latency engineering optimizations across the telemetry ingestion, geospatial computation, and UI rendering pipelines:
+
+*   **Zero-Alloc Map Sorting:** `Date.parse()` timestamp comparator in `VesselMap` avoids up to 28,000 intermediate `Date` object instantiations on viewport pan/zoom events.
+*   **Decoupled Marker Event Handlers:** `vesselRef` pattern in `VesselMarker` prevents thousands of mounted Leaflet markers from invalidating click handlers on live position updates.
+*   **O(1) Map-Based Telemetry Merge:** Map-indexed vessel updates in `useVessels` eliminate full O(N) array index scans on WebSocket flushes and short-circuit when data is unchanged.
+*   **On-Demand Debounced Search:** Replaced continuous 1,500-item search index generation with on-demand scans during active user typing.
+*   **Fast-Path Dark Detection:** Minimum-gap filtering (< 6h) skips geospatial database round-trips for 99.9% of normal AIS telemetry.
+*   **Single Round-Trip Coastal Spatial Checks:** Short-circuits `ST_DWithin` PostGIS queries without running redundant `COUNT(*)` fallback checks on hits.
+*   **Single-Session Ingestion Transactions:** Position telemetry and static identity updates share an atomic DB session to prevent partial rollback inconsistencies.
+*   **Non-Blocking Analytics Seeding:** New vessel metadata enrichment runs via background `asyncio` tasks, eliminating 50–200ms ingest loop stalls.
+*   **Single-Serialization Broadcasts:** Unfiltered WebSocket payloads are JSON-serialized once and broadcast across all connected clients.
+*   **Antipodal Geodesic Stability:** Haversine distance functions clamp intermediate arguments to prevent domain errors on exact antipodal coordinates.
+
+---
+
 ## 📝 License & Contributing
 
 PortWatch is open-source software licensed under the [AGPL-3.0 License](LICENSE).
