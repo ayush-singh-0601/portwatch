@@ -66,6 +66,9 @@ def haversine_distance(
         math.sin(d_phi / 2.0) ** 2
         + math.cos(phi1) * math.cos(phi2) * math.sin(d_lam / 2.0) ** 2
     )
+    # Clamp a to [0.0, 1.0] to prevent math domain errors for antipodal points
+    # caused by floating-point roundoff (e.g. 1.0000000000000002 -> ValueError in sqrt(1 - a))
+    a = min(1.0, max(0.0, a))
     c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
     return _EARTH_RADIUS_KM * c
 
