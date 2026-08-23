@@ -181,7 +181,7 @@ async def get_enriched_vessels(
 
     vessel_result = await db.execute(vessel_query)
     vessels = list(vessel_result.scalars().all())
-    imo_list = [v.imo for v in vessels]
+    imo_list = [v.imo for v in vessels if v.imo is not None]
 
     # ── 3. Ownership per vessel (single query for edges) ──────────
     ownership_map: dict[int, dict] = {}
