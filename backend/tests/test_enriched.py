@@ -190,3 +190,46 @@ class TestRiskScoreOrdering:
 
     def test_empty_list_returns_none(self):
         assert self._select_latest([]) is None
+
+
+# ── Port-call sort with None arrival_time ─────────────────────────────────────
+
+class TestPortCallSort:
+    """Verify the _EPOCH sentinel allows safe sorting when arrival_time is None."""
+
+    class _FakePortCall:
+        def __init__(self, arrival_time):
+            self.arrival_time = arrival_time
+
+    def _sort_port_calls(self, port_calls):
+        from datetime import datetime, timezone
+
+        _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        return sorted(
+            port_calls,
+            key=lambda x: x.arrival_time if x.arrival_time else _EPOCH,
+            reverse=True,
+        )
+
+    def test_none_arrival_time_sorts_to_end(self):
+        dt = datetime(2025, 6, 1, tzinfo=timezone.utc)
+        with_date = self._FakePortCall(dt)
+        without_date = self._FakePortCall(None)
+        result = self._sort_port_calls([without_date, with_date])
+        assert result[0] is with_date
+        assert result[1] is without_date
+
+    def test_all_none_does_not_raise(self):
+        calls = [self._FakePortCall(None) for _ in range(5)]
+        result = self._sort_port_calls(calls)
+        assert len(result) == 5
+
+    def test_mixed_sort_is_stable_for_equal_dates(self):
+        dt = datetime(2025, 1, 15, tzinfo=timezone.utc)
+        a = self._FakePortCall(dt)
+        b = self._FakePortCall(dt)
+        c = self._FakePortCall(None)
+        result = self._sort_port_calls([c, a, b])
+        # Both dated entries should precede the None entry
+        assert result[-1] is c
+
