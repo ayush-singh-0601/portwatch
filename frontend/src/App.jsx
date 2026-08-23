@@ -49,6 +49,19 @@ export default function App() {
 
   // ── Filter vessels ─────────────────────────────────────────
   const filteredVessels = useMemo(() => {
+    const isAllTypes =
+      filters.types.length >= 5 &&
+      ['cargo', 'tanker', 'fishing', 'passenger', 'other'].every((t) =>
+        filters.types.includes(t)
+      )
+    const isDefaultRisk = (filters.riskMin ?? 0) <= 0 && (filters.riskMax ?? 100) >= 100
+
+    // Fast-path: if no filters are actively restricting the dataset, return
+    // the original vessels array reference directly to avoid cloning 1500 elements.
+    if (isAllTypes && isDefaultRisk) {
+      return vessels
+    }
+
     const selectedTypes = new Set(filters.types)
     return vessels.filter((v) => {
       if (!selectedTypes.has(v.type)) return false
