@@ -1,5 +1,5 @@
 """
-Unit tests for app.utils.geo — haversine distance and proximity helpers.
+Unit tests for app.utils.geo -- haversine distance and proximity helpers.
 
 These tests run without any database or network access.
 """
@@ -41,10 +41,10 @@ class TestHaversineDistance:
         assert haversine_distance(1.35, 103.82, 1.35, 103.82) == pytest.approx(0.0, abs=1e-9)
 
     def test_singapore_to_rotterdam_within_1_percent(self):
-        """Singapore -> Rotterdam is ~10,300 km; result must be within 1%."""
+        """Singapore -> Rotterdam is ~10,550 km; result must be within 1%."""
         # Singapore: 1.35 N, 103.82 E  |  Rotterdam: 51.95 N, 4.14 E
         dist = haversine_distance(1.35, 103.82, 51.95, 4.14)
-        assert dist == pytest.approx(10_300.0, rel=0.01)
+        assert dist == pytest.approx(10_550.0, rel=0.01)
 
     def test_symmetry(self):
         """Distance A->B must equal B->A."""
@@ -62,6 +62,13 @@ class TestHaversineDistance:
         # Fiji (approx) -> Samoa (approx)
         dist = haversine_distance(-17.0, 179.0, -13.0, -172.0)
         assert 0.0 < dist < 2000.0
+
+    def test_exact_antipodal_does_not_raise(self):
+        """Antipodal points (opposite sides of globe) must not raise math domain error."""
+        # Exact antipodes: (lat, lon) and (-lat, lon + 180)
+        dist = haversine_distance(45.0, 10.0, -45.0, -170.0)
+        # Half Earth circumference = pi * 6371 ~= 20015 km
+        assert dist == pytest.approx(math.pi * 6371.0, rel=1e-3)
 
 
 # ---------------------------------------------------------------------------
@@ -85,7 +92,7 @@ class TestIsWithinNm:
         # Use a point ~92.6 km north of origin
         lat2 = 0.0 + (92.6 / 111.0)  # ~1 degree north at equator
         within = is_within_nm(0.0, 0.0, lat2, 0.0, 50.0)
-        # Could be True or False at the boundary — just ensure no crash
+        # Could be True or False at the boundary -- just ensure no crash
         assert isinstance(within, bool)
 
 
