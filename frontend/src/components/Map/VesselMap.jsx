@@ -51,7 +51,12 @@ function compareMarkerPriority(a, b) {
   const riskDelta = (b.riskScore ?? 0) - (a.riskScore ?? 0)
   if (riskDelta !== 0) return riskDelta
 
-  return new Date(b.lastSeen ?? 0).getTime() - new Date(a.lastSeen ?? 0).getTime()
+  // Date.parse avoids constructing intermediate Date objects inside the
+  // O(N log N) sort comparator, eliminating thousands of GC allocations
+  // on every viewport pan, zoom, or live telemetry update.
+  const timeB = typeof b.lastSeen === 'number' ? b.lastSeen : (Date.parse(b.lastSeen) || 0)
+  const timeA = typeof a.lastSeen === 'number' ? a.lastSeen : (Date.parse(a.lastSeen) || 0)
+  return timeB - timeA
 }
 
 function MapViewportTracker({ onViewportChange }) {
