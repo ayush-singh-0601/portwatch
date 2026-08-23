@@ -99,3 +99,89 @@ async def test_no_self_loop_ownership_edges():
             f"Self-loop detected on edge '{edge.relationship_type}': "
             f"source_entity_id == target_entity_id == {edge.source_entity_id}"
         )
+
+
+# ── _populate_analytics_bg ────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_populate_analytics_bg_skips_missing_vessel():
+    """_populate_analytics_bg should log a warning and exit silently when the
+    vessel record doesn't exist yet (e.g. race condition after rollback).
+    """
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    db = AsyncMock()
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = None
+    db.execute = AsyncMock(return_value=result)
+    db.__aenter__ = AsyncMock(return_value=db)
+    db.__aexit__ = AsyncMock(return_value=False)
+
+    mock_session_factory = MagicMock()
+    mock_session_factory.return_value = db
+
+    with (
+        patch("app.services.ais_ingestion.async_session_factory", mock_session_factory),
+        patch("app.services.ais_ingestion.populate_vessel_analytics") as mock_populate,
+    ):
+        from app.services.ais_ingestion import _populate_analytics_bg
+        await _populate_analytics_bg(9999999)
+        # populate_vessel_analytics must NOT be called for a missing vessel
+        mock_populate.assert_not_called()
+
+
+# ── handle_message atomicity ──────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_handle_message_uses_single_session():
+    """Regression: handle_message must open exactly one DB session per message
+    so position and identity share an atomic commit/rollback boundary.
+    """
+    from unittest.mock import AsyncMock, MagicMock, patch, call
+
+    session_open_count = 0
+
+    class _TrackingSession:
+        async def __aenter__(self):
+            nonlocal session_open_count
+            session_open_count += 1
+            return AsyncMock(
+                execute=AsyncMock(return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=None), scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[]))))),
+                commit=AsyncMock(),
+                flush=AsyncMock(),
+                add=MagicMock(),
+                add_all=MagicMock(),
+            )
+
+        async def __aexit__(self, *args):
+            return False
+
+    raw_msg = {
+        "MessageType": "PositionReport",
+        "MetaData": {"MMSI": 123456789, "TimeReceived": "2025-01-01T00:00:00Z"},
+        "Message": {
+            "PositionReport": {
+                "Latitude": 1.23,
+                "Longitude": 4.56,
+                "Sog": 10.0,
+                "Cog": 90.0,
+                "TrueHeading": 90,
+                "NavigationalStatus": 0,
+            }
+        },
+    }
+
+    with (
+        patch("app.services.ais_ingestion.async_session_factory", side_effect=_TrackingSession),
+        patch("app.services.ais_ingestion.decode_aisstream_message", return_value={"type": "position"}),
+        patch("app.services.ais_ingestion.extract_position", return_value=None),
+        patch("app.services.ais_ingestion.extract_vessel_identity", return_value=None),
+    ):
+        from app.services.ais_ingestion import AISIngestionService
+        svc = AISIngestionService()
+        await svc.handle_message(raw_msg)
+
+    assert session_open_count <= 1, (
+        f"handle_message opened {session_open_count} sessions; expected at most 1"
+    )
+
