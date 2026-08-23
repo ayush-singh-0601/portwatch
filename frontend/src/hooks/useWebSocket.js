@@ -136,11 +136,14 @@ export default function useWebSocket(url) {
       if (entries.length === 0) return
 
       // When the batch is too large, keep only the most recent MAX_PENDING_UPDATES
-      // entries. Sort by proper Date comparison, not localeCompare, which can
-      // produce incorrect ordering for ISO strings of different lengths.
+      // entries. Copy the array before sorting to avoid mutating the original
+      // entries reference in place — Array.prototype.sort() is destructive and
+      // could produce subtle ordering bugs if entries is referenced elsewhere
+      // in the same tick. Sort by proper Date comparison, not localeCompare,
+      // which can produce incorrect ordering for ISO strings of different lengths.
       const cappedEntries =
         entries.length > MAX_PENDING_UPDATES
-          ? entries
+          ? [...entries]
               .sort((a, b) => new Date(b[1].timestamp) - new Date(a[1].timestamp))
               .slice(0, MAX_PENDING_UPDATES)
           : entries
