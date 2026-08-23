@@ -236,9 +236,12 @@ class DarkVesselDetector:
             result = await self.db.execute(postgis_q, {"lat": lat, "lon": lon, "radius_m": radius_m})
             row = result.fetchone()
             if row is not None:
+                # ST_DWithin found a nearby port — no need for a second query.
                 return True
-            # PostGIS returned a result (even None) — query succeeded.
-            # Check count to distinguish "no nearby port" from "empty table".
+
+            # PostGIS returned no row: either no nearby port exists, or the
+            # ports table is empty.  Run COUNT only at this point to distinguish
+            # the two cases, avoiding an extra round-trip on coastal hits.
             count_result = await self.db.execute(select(func.count()).select_from(Port))
             count = count_result.scalar() or 0
             if count == 0:
