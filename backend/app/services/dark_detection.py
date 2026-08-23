@@ -145,15 +145,15 @@ class DarkVesselDetector:
             # Check if there is a gap
             hours_gap = delta.total_seconds() / 3600.0
 
-            # Determine if coastal or open ocean
-            # We can use a simple check: if we are close to a port (within 50nm).
-            # If PostGIS is available, we can run a spatial query to find if the point
-            # is near any land or port. As a fallback, we check if it is within 50nm
-            # of any known ports/land, or we use a general 6 hour threshold for
-            # conservative alerts, or 24 hours for open ocean.
-            # Let's check distance to coast. For the MVP, we assume a gap > 6h is coastal
-            # if within 50nm (approx 0.83 degrees) of any coast/port, otherwise > 24h.
-            # Let's perform a fast check: we check if there are nearby ports using PostGIS.
+            # Fast-path optimization: the minimum possible dark event threshold
+            # is 6.0 hours (coastal).  If the gap is smaller than 6 hours, it can
+            # NEVER be a dark event, so we skip the spatial DB query entirely.
+            # For typical AIS telemetry (1-5 minute intervals), this eliminates
+            # thousands of unnecessary DB round-trips per detection run.
+            if hours_gap < 6.0:
+                continue
+
+            # Determine if coastal (<50nm, threshold 6h) or open ocean (threshold 24h)
             is_coastal = await self._is_coastal_position(pos_a.latitude, pos_a.longitude)
             threshold_hours = 6.0 if is_coastal else 24.0
 
