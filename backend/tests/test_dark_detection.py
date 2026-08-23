@@ -140,3 +140,53 @@ class TestIsInDeadZone:
             }
         }
         assert is_in_dead_zone(5.0, 5.0, [feature]) is False
+
+
+# ── _is_coastal_position COUNT-skip optimization ──────────────────────────────
+
+class TestCoastalPositionCountSkip:
+    """Regression: _is_coastal_position must not issue a COUNT query when
+    PostGIS's ST_DWithin already confirmed a nearby port.
+    """
+
+    @pytest.mark.asyncio
+    async def test_no_count_query_when_postgis_finds_nearby_port(self):
+        """When ST_DWithin returns a row, the COUNT(*) query must be skipped."""
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock, patch, call
+
+        count_calls = 0
+
+        async def fake_execute(query, *args, **kwargs):
+            nonlocal count_calls
+            # Detect count query by inspecting the compiled text
+            q_str = str(query)
+            if "count" in q_str.lower():
+                count_calls += 1
+                r = MagicMock()
+                r.scalar.return_value = 10
+                return r
+
+            # ST_DWithin query → return a matching row
+            r = MagicMock()
+            r.fetchone.return_value = (1,)  # non-None → coastal hit
+            return r
+
+        db = AsyncMock()
+        db.execute = fake_execute
+
+        with patch("app.services.dark_detection.sa_text" if False else "builtins.open", side_effect=FileNotFoundError):
+            pass  # just verify the import works
+
+        from app.services.dark_detection import DarkVesselDetector
+
+        detector = DarkVesselDetector(db)
+        # Use a direct call to the private helper
+        result = await detector._is_coastal_position(1.3521, 103.8198)
+
+        assert result is True, "Expected True when PostGIS found a nearby port"
+        assert count_calls == 0, (
+            f"COUNT query was called {count_calls} time(s) but should be 0 "
+            "when ST_DWithin already returned a matching row"
+        )
+
