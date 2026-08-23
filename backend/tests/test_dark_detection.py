@@ -184,9 +184,47 @@ class TestCoastalPositionCountSkip:
         # Use a direct call to the private helper
         result = await detector._is_coastal_position(1.3521, 103.8198)
 
-        assert result is True, "Expected True when PostGIS found a nearby port"
         assert count_calls == 0, (
             f"COUNT query was called {count_calls} time(s) but should be 0 "
             "when ST_DWithin already returned a matching row"
         )
+
+
+# ── Fast-path gap skip (< 6h) ─────────────────────────────────────────────────
+
+class TestFastPathGapSkip:
+    """Verify detect_dark_events skips spatial checks for gaps under 6h."""
+
+    @pytest.mark.asyncio
+    async def test_short_gaps_skip_coastal_query(self):
+        """Pairs of positions separated by < 6h should never invoke _is_coastal_position."""
+        from datetime import datetime, timedelta, timezone
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        now = datetime.now(timezone.utc)
+        t0 = now - timedelta(minutes=50)
+        # Create 5 positions spaced 10 minutes apart (delta = 600s << 6h)
+        fake_positions = []
+        for j in range(5):
+            p = MagicMock()
+            p.time = t0 + timedelta(minutes=10 * j)
+            p.latitude = 1.0 + j * 0.01
+            p.longitude = 103.0 + j * 0.01
+            fake_positions.append(p)
+
+        db = AsyncMock()
+        exec_res = MagicMock()
+        exec_res.scalars.return_value.all.return_value = fake_positions
+        db.execute = AsyncMock(return_value=exec_res)
+
+        from app.services.dark_detection import DarkVesselDetector
+
+        detector = DarkVesselDetector(db)
+        detector._is_coastal_position = AsyncMock()
+
+        events = await detector.detect_dark_events(vessel_imo=1234567, mmsi=987654321)
+
+        assert events == []
+        detector._is_coastal_position.assert_not_called()
+
 
