@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useRef, useEffect } from 'react'
 import { Marker, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import { getVesselColor, getVesselLabel } from '../../utils/vesselTypes'
@@ -56,16 +56,27 @@ function VesselMarker({ vessel, isSelected, onClick }) {
   const lat = Number(vessel.position?.lat)
   const lon = Number(vessel.position?.lon)
 
+  // Keep a ref to the latest vessel so eventHandlers can read it without
+  // being listed as a dependency.  This prevents all ~1500 markers from
+  // re-creating their click handler on every 2-second WebSocket flush.
+  const vesselRef = useRef(vessel)
+  useEffect(() => {
+    vesselRef.current = vessel
+  }, [vessel])
+
   const icon = useMemo(
     () => createVesselIcon(vessel.type, vessel.heading, isSelected, vessel.riskScore),
     [vessel.type, vessel.heading, isSelected, vessel.riskScore]
   )
   const position = useMemo(() => [lat, lon], [lat, lon])
+
+  // eventHandlers depends only on onClick (stable across renders), not on
+  // the vessel object itself, so the memo is not busted by position updates.
   const eventHandlers = useMemo(
     () => ({
-      click: () => onClick?.(vessel),
+      click: () => onClick?.(vesselRef.current),
     }),
-    [onClick, vessel]
+    [onClick]
   )
 
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
