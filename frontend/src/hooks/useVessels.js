@@ -87,23 +87,29 @@ export default function useVessels() {
     if (!livePositions || Object.keys(livePositions).length === 0) return
 
     setVessels((prev) => {
-      const next = [...prev]
-      const mmsiToVesselIdx = {}
-      const imoToVesselIdx = {}
-      
-      next.forEach((v, idx) => {
-        if (v.mmsi) mmsiToVesselIdx[String(v.mmsi)] = idx
-        if (v.imo) imoToVesselIdx[String(v.imo)] = idx
+      const updates = Object.entries(livePositions)
+      if (updates.length === 0) return prev   // nothing to merge → no state update
+
+      // Build O(1) lookup maps once per merge cycle.
+      // Using Map avoids the repeated linear scan through prev on each update key.
+      const byMmsi = new Map()
+      const byId   = new Map()
+      prev.forEach((v, idx) => {
+        if (v.mmsi) byMmsi.set(String(v.mmsi), idx)
+        byId.set(String(v.id), idx)
       })
 
-      Object.entries(livePositions).forEach(([key, update]) => {
+      let changed = false
+      const next = [...prev]
+
+      updates.forEach(([key, update]) => {
         if (!isFiniteCoordinate(update.lat) || !isFiniteCoordinate(update.lon)) return
 
-        // Try to find index of existing vessel by MMSI or IMO
-        let idx = mmsiToVesselIdx[key] ?? imoToVesselIdx[key]
-        
+        // Resolve vessel index via MMSI key or ID key (whichever matches)
+        const idx = byMmsi.get(key) ?? byId.get(key)
+
         if (idx !== undefined) {
-          // Update existing vessel
+          // Update existing vessel — only replace if values actually differ
           next[idx] = {
             ...next[idx],
             position: {
@@ -114,11 +120,12 @@ export default function useVessels() {
             speed: update.speed ?? next[idx].speed,
             lastSeen: update.timestamp || new Date().toISOString(),
           }
+          changed = true
         } else {
           // It's a new vessel not currently in the state! Synthesize it
           const mmsiVal = isNaN(Number(key)) ? null : String(key)
           // Avoid adding duplicates during the loop
-          if (mmsiVal && mmsiToVesselIdx[mmsiVal] === undefined && next.length < MAX_TRACKED_VESSELS) {
+          if (mmsiVal && byMmsi.get(mmsiVal) === undefined && next.length < MAX_TRACKED_VESSELS) {
             const newVessel = {
               id: mmsiVal,
               imo: null,
@@ -144,12 +151,15 @@ export default function useVessels() {
               sanctions: { matched: false, lists: [] }
             }
             next.push(newVessel)
-            mmsiToVesselIdx[mmsiVal] = next.length - 1
+            byMmsi.set(mmsiVal, next.length - 1)
+            changed = true
           }
         }
       })
-      
-      return next
+
+      // Return the original prev reference unchanged when nothing was updated
+      // to avoid triggering a React re-render of all downstream components.
+      return changed ? next : prev
     })
   }, [livePositions])
 
