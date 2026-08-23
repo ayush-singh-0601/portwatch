@@ -144,7 +144,10 @@ export default function useWebSocket(url) {
       const cappedEntries =
         entries.length > MAX_PENDING_UPDATES
           ? [...entries]
-              .sort((a, b) => new Date(b[1].timestamp) - new Date(a[1].timestamp))
+              .sort(
+                (a, b) =>
+                  (Date.parse(b[1].timestamp) || 0) - (Date.parse(a[1].timestamp) || 0)
+              )
               .slice(0, MAX_PENDING_UPDATES)
           : entries
 
