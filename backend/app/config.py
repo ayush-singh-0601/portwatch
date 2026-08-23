@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     MOCK_DATA_MODE: bool = True
     APP_ENV: str = "development"
     APP_DEBUG: bool = True
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ]
 
 
 # Singleton instance — import this throughout the application.
