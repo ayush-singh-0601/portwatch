@@ -109,17 +109,32 @@ class ConnectionManager:
     async def broadcast(self, position_data: dict) -> None:
         """Send a position update to all connected clients that match filters.
 
+        The serialized JSON string is computed **once** for clients that have
+        no bbox filter (the common case), and separately for each client that
+        has a filter applied (since their payload differs).  This avoids calling
+        ``json.dumps`` N times for N unfiltered clients.
+
         Args:
             position_data: Position dict with at least ``latitude`` and
                 ``longitude`` keys.
         """
         disconnected: list[int] = []
+        # Lazy-serialized string shared by all clients with no bbox filter.
+        unfiltered_message: str | None = None
 
         for ws_id, client in self._connections.items():
             payload = self._filter_payload_for_client(position_data, client)
             if payload is None:
                 continue
-            message = json.dumps(payload)
+
+            if payload is position_data:
+                # No filtering was applied — reuse the already-serialized string.
+                if unfiltered_message is None:
+                    unfiltered_message = json.dumps(payload)
+                message = unfiltered_message
+            else:
+                # Filtered payload is unique to this client — serialize it fresh.
+                message = json.dumps(payload)
 
             try:
                 await client.websocket.send_text(message)
