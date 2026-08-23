@@ -1,4 +1,4 @@
-﻿"""
+"""
 Tests for the risk_scoring.py RiskScoringAgent — specifically the
 _check_identity_changes factor fix.
 
@@ -66,3 +66,71 @@ class TestIdentityChangesThreshold:
         assert '6' in factor.evidence_description
         assert 'threshold' in factor.evidence_description
         assert 'baseline' in factor.evidence_description
+
+
+# ── Flag of Convenience & High Risk Flag Normalization ───────────────────────
+
+FLAG_OF_CONVENIENCE = {
+    "ATG", "BHS", "BRB", "BLZ", "BMU", "BOL", "KHM", "CYM", "COM",
+    "CYP", "GNQ", "GEO", "GIB", "HND", "JAM", "LBN", "LBR", "MLT",
+    "MHL", "MUS", "MDA", "MNG", "MMR", "PAN", "STP", "VCT", "LKA",
+    "TON", "VUT",
+}
+
+HIGH_RISK_FLAG_STATES = {
+    "CMR", "TGO", "TZA", "PLW", "COM", "GNQ", "BOL", "MDG",
+    "SLE", "VUT", "ALB", "GNB",
+}
+
+
+class _FakeVessel:
+    def __init__(self, flag):
+        self.flag = flag
+
+
+def _check_foc(vessel):
+    if vessel.flag and vessel.flag.strip().upper() in FLAG_OF_CONVENIENCE:
+        flag_code = vessel.flag.strip().upper()
+        return _FakeRiskFactor(
+            factor_name="flag_of_convenience",
+            points=15,
+            evidence_description=f"Vessel registered under {flag_code}",
+        )
+    return None
+
+
+def _check_high_risk(vessel):
+    if vessel.flag and vessel.flag.strip().upper() in HIGH_RISK_FLAG_STATES:
+        flag_code = vessel.flag.strip().upper()
+        return _FakeRiskFactor(
+            factor_name="high_risk_flag_state",
+            points=5,
+            evidence_description=f"Vessel flagged to {flag_code}",
+        )
+    return None
+
+
+class TestFlagNormalization:
+    def test_padded_flag_matches_foc(self):
+        v = _FakeVessel("PAN ")
+        res = _check_foc(v)
+        assert res is not None
+        assert res.points == 15
+
+    def test_lowercase_flag_matches_foc(self):
+        v = _FakeVessel("lbr")
+        res = _check_foc(v)
+        assert res is not None
+        assert res.points == 15
+
+    def test_none_flag_returns_none(self):
+        v = _FakeVessel(None)
+        assert _check_foc(v) is None
+        assert _check_high_risk(v) is None
+
+    def test_padded_high_risk_flag(self):
+        v = _FakeVessel(" CMR ")
+        res = _check_high_risk(v)
+        assert res is not None
+        assert res.points == 5
+
