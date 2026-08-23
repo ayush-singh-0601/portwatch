@@ -163,46 +163,37 @@ export default function useVessels() {
     })
   }, [livePositions])
 
-  const searchIndex = useMemo(() => {
-    return vessels.map((vessel) => ({
-      vessel,
-      text: [
-        vessel.name,
-        vessel.imo,
-        vessel.mmsi,
-        vessel.type,
-        vessel.flag?.name,
-        vessel.destination,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase(),
-    }))
+  // Keep a ref to the latest vessels array so searchVessels remains stable
+  // and does not need to re-index all 1500 vessels on every 2-second telemetry tick.
+  const vesselsRef = useRef(vessels)
+  useEffect(() => {
+    vesselsRef.current = vessels
   }, [vessels])
 
-  // ── Search with debounce ───────────────────────────────────
-  const searchVessels = useCallback(
-    (query) => {
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+  // ── Search with debounce (on-demand scan) ───────────────────
+  const searchVessels = useCallback((query) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
 
-      if (!query || query.trim().length === 0) {
-        setSearchResults([])
-        return
-      }
+    if (!query || query.trim().length === 0) {
+      setSearchResults([])
+      return
+    }
 
-      searchTimerRef.current = setTimeout(() => {
-        const q = query.toLowerCase().trim()
-        const results = []
-        for (const entry of searchIndex) {
-          if (!entry.text.includes(q)) continue
-          results.push(entry.vessel)
+    searchTimerRef.current = setTimeout(() => {
+      const q = query.toLowerCase().trim()
+      const results = []
+      const currentVessels = vesselsRef.current || []
+
+      for (const vessel of currentVessels) {
+        const text = `${vessel.name || ''} ${vessel.imo || ''} ${vessel.mmsi || ''} ${vessel.type || ''} ${vessel.flag?.name || ''} ${vessel.destination || ''}`.toLowerCase()
+        if (text.includes(q)) {
+          results.push(vessel)
           if (results.length >= MAX_SEARCH_RESULTS) break
         }
-        setSearchResults(results)
-      }, 300)
-    },
-    [searchIndex]
-  )
+      }
+      setSearchResults(results)
+    }, 300)
+  }, [])
 
   // ── Select vessel ──────────────────────────────────────────
   const selectVessel = useCallback(
