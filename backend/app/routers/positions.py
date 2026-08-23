@@ -104,17 +104,7 @@ async def get_current_positions(
     rows = result.scalars().all()
 
     positions = [
-        PositionResponse(
-            mmsi=pos.mmsi,
-            latitude=pos.latitude,
-            longitude=pos.longitude,
-            speed=pos.speed,
-            course=pos.course,
-            heading=pos.heading,
-            nav_status=pos.nav_status,
-            msg_type=pos.msg_type,
-            time=pos.time,
-        )
+        PositionResponse.model_validate(pos)
         for pos in rows
     ]
 
