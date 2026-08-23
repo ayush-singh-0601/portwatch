@@ -41,3 +41,4 @@ reports/
 
 # Logs
 *.log
+.commit-discipline/

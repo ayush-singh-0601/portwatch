@@ -33,7 +33,7 @@ def _make_empty_db() -> AsyncMock:
 
 
 # ---------------------------------------------------------------------------
-# DarkVesselDetector._is_coastal_position — empty table -> True
+# DarkVesselDetector._is_coastal_position -- empty table -> True
 # ---------------------------------------------------------------------------
 
 class TestIsCoastalPositionEmptyTable:
@@ -64,7 +64,7 @@ class TestIsCoastalPositionEmptyTable:
 
 
 # ---------------------------------------------------------------------------
-# AISAnomalyDetector._is_near_risk_zone — empty table -> False for open ocean
+# AISAnomalyDetector._is_near_risk_zone -- empty table -> False for open ocean
 # ---------------------------------------------------------------------------
 
 class TestIsNearRiskZoneEmptyTable:
@@ -76,7 +76,7 @@ class TestIsNearRiskZoneEmptyTable:
         db = _make_empty_db()
         detector = AISAnomalyDetector(db)
 
-        # Gulf of Guinea — far from any ship-breaking yard or sanctioned port
+        # Gulf of Guinea -- far from any ship-breaking yard or sanctioned port
         result = await detector._is_near_risk_zone(0.0, 0.0)
         assert result is False
 
@@ -95,7 +95,7 @@ class TestIsNearRiskZoneEmptyTable:
 
 
 # ---------------------------------------------------------------------------
-# STSTransferDetector._check_in_port_limits — empty table -> False
+# STSTransferDetector._check_in_port_limits -- empty table -> False
 # ---------------------------------------------------------------------------
 
 class TestCheckInPortLimitsEmptyTable:

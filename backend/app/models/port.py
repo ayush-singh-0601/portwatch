@@ -3,7 +3,7 @@ SQLAlchemy model for the ``ports`` reference table.
 
 Stores a lightweight registry of world ports used exclusively for
 geospatial proximity queries (coastal detection, port-limit checks,
-and risk-zone proximity).  No vessel FK — purely a read-only
+and risk-zone proximity).  No vessel FK -- purely a read-only
 reference dataset.
 """
 
