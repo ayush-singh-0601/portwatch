@@ -113,27 +113,35 @@ class AISIngestionService:
         })
 
     async def handle_message(self, raw_data: dict[str, Any]) -> None:
-        """Process a decoded NMEA message received from the live feed."""
+        """Process a decoded NMEA message received from the live feed.
+
+        Both the position insert and the vessel-identity upsert are executed
+        inside a **single** database session so they either both commit or both
+        roll back, preventing partial writes when the second operation fails.
+        """
         try:
             # Decode the raw JSON structure from aisstream.io
             decoded = decode_aisstream_message(raw_data)
             if not decoded:
                 return
 
-            # ── 1. Handle Position Telemetry ───────────────────────────────
-            pos_data = extract_position(decoded)
-            if pos_data:
-                # Resolve timestamp, fallback to current UTC datetime
-                time_val = datetime.now(timezone.utc)
-                if pos_data.timestamp:
-                    try:
-                        clean_ts = pos_data.timestamp.split(" UTC")[0].strip()
-                        time_val = datetime.fromisoformat(clean_ts).replace(tzinfo=timezone.utc)
-                    except Exception:
-                        pass
+            # Open one session for the entire message — position + identity
+            # share the same transaction so failures roll back atomically.
+            async with async_session_factory() as db:
 
-                # Save position report to the database
-                async with async_session_factory() as db:
+                # ── 1. Handle Position Telemetry ───────────────────────────────
+                pos_data = extract_position(decoded)
+                if pos_data:
+                    # Resolve timestamp, fallback to current UTC datetime
+                    time_val = datetime.now(timezone.utc)
+                    if pos_data.timestamp:
+                        try:
+                            clean_ts = pos_data.timestamp.split(" UTC")[0].strip()
+                            time_val = datetime.fromisoformat(clean_ts).replace(tzinfo=timezone.utc)
+                        except Exception:
+                            pass
+
+                    # Save position report to the database
                     stmt = pg_insert(VesselPosition).values(
                         time=time_val,
                         mmsi=pos_data.mmsi,
@@ -148,24 +156,22 @@ class AISIngestionService:
                         index_elements=["time", "mmsi"]
                     )
                     await db.execute(stmt)
-                    await db.commit()
 
-                # Queue live updates so real AIS volume does not flood browsers.
-                self._queue_position_broadcast({
-                    "mmsi": pos_data.mmsi,
-                    "latitude": pos_data.latitude,
-                    "longitude": pos_data.longitude,
-                    "speed": pos_data.speed,
-                    "course": pos_data.course,
-                    "heading": pos_data.heading,
-                    "nav_status": pos_data.nav_status,
-                    "time": time_val.isoformat(),
-                })
+                    # Queue live updates so real AIS volume does not flood browsers.
+                    self._queue_position_broadcast({
+                        "mmsi": pos_data.mmsi,
+                        "latitude": pos_data.latitude,
+                        "longitude": pos_data.longitude,
+                        "speed": pos_data.speed,
+                        "course": pos_data.course,
+                        "heading": pos_data.heading,
+                        "nav_status": pos_data.nav_status,
+                        "time": time_val.isoformat(),
+                    })
 
-            # ── 2. Handle Vessel Static Identity Updates ──────────────────
-            identity_data = extract_vessel_identity(decoded)
-            if identity_data and identity_data.imo:
-                async with async_session_factory() as db:
+                # ── 2. Handle Vessel Static Identity Updates ──────────────────
+                identity_data = extract_vessel_identity(decoded)
+                if identity_data and identity_data.imo:
                     # Query if vessel already exists in the registry
                     stmt = select(Vessel).where(Vessel.imo == identity_data.imo)
                     res = await db.execute(stmt)
@@ -195,12 +201,18 @@ class AISIngestionService:
                         )
                         db.add(vessel)
                         await db.flush()
-                        await populate_vessel_analytics(db, vessel)
+                        # Commit the new vessel record first so the background
+                        # analytics task can find it via its own session.
+                        await db.commit()
+                        asyncio.create_task(_populate_analytics_bg(vessel.imo))
+                        return  # analytics task handles its own session
 
-                    await db.commit()
+                # Single commit for position + identity update
+                await db.commit()
 
         except Exception as exc:
             logger.error("Error processing AIS message inside ingest service: %s", exc, exc_info=True)
+
 
 
 def _map_ship_type(type_code: int) -> str:
@@ -216,6 +228,38 @@ def _map_ship_type(type_code: int) -> str:
     elif 50 <= type_code <= 59:
         return "Special / Tug"
     return "Other"
+
+
+async def _populate_analytics_bg(vessel_imo: int) -> None:
+    """Populate vessel analytics in a background task with its own DB session.
+
+    Called via ``asyncio.create_task`` after a new vessel is committed so the
+    ingest event loop is not blocked by the multiple SELECT / INSERT queries
+    required to seed ownership, port calls, sanctions, and risk scores.
+
+    The new vessel record must already be committed before this coroutine
+    runs to avoid FK-constraint violations on the analytics inserts.
+    """
+    async with async_session_factory() as db:
+        try:
+            result = await db.execute(select(Vessel).where(Vessel.imo == vessel_imo))
+            vessel = result.scalar_one_or_none()
+            if vessel is None:
+                logger.warning(
+                    "_populate_analytics_bg: vessel IMO %d not found — skipping analytics.",
+                    vessel_imo,
+                )
+                return
+            await populate_vessel_analytics(db, vessel)
+            await db.commit()
+        except Exception as exc:
+            logger.error(
+                "_populate_analytics_bg: analytics population failed for IMO %d: %s",
+                vessel_imo,
+                exc,
+                exc_info=True,
+            )
+
 
 
 async def populate_vessel_analytics(db: Any, vessel: Vessel) -> None:
