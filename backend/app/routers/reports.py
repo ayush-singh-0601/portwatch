@@ -24,6 +24,7 @@ from app.schemas.report import ReportRequest, ReportResponse, ReportStatusRespon
 router = APIRouter(tags=["Reports"])
 
 # In-memory store for generated reports (production would use S3 / object storage)
+_MAX_STORE_SIZE = 500
 _report_store: dict[str, dict] = {}
 
 
@@ -67,6 +68,11 @@ async def generate_report(
         output_format=request.format.value,
     )
 
+    # Prevent unbounded memory growth in report store
+    if len(_report_store) >= _MAX_STORE_SIZE:
+        oldest_key = next(iter(_report_store))
+        _report_store.pop(oldest_key, None)
+
     # Store report metadata for download
     _report_store[result["report_id"]] = {
         **result,
@@ -93,6 +99,12 @@ async def download_report(report_id: str) -> FileResponse:
     Raises:
         HTTPException 404: If the report does not exist.
     """
+    if not report_id or ".." in report_id or "/" in report_id or "\\" in report_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid report ID format",
+        )
+
     report_meta = _report_store.get(report_id)
 
     if report_meta is None:
@@ -101,8 +113,8 @@ async def download_report(report_id: str) -> FileResponse:
             detail=f"Report {report_id} not found",
         )
 
-    filepath = Path(report_meta["filepath"])
-    if not filepath.exists():
+    filepath = Path(report_meta["filepath"]).resolve()
+    if not filepath.exists() or not filepath.is_file():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Report file no longer exists on disk",
