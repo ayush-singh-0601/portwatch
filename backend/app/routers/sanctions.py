@@ -140,13 +140,13 @@ async def screen_vessel(
 
     This endpoint:
     1. Fetches the vessel and its ownership entities.
-    2. Runs fuzzy name matching against the consolidated sanctions list.
-    3. Persists any new matches above the confidence threshold.
+    2. Runs multi-stage fuzzy and exact screening (IMO, vessel name, ownership chain).
+    3. Persists screening matches with full deduplication.
 
     Raises:
         HTTPException 404: If the vessel does not exist.
     """
-    from app.services.name_matcher import match_entity, normalize_name
+    from app.agents.sanctions import SanctionsScreeningAgent
 
     # Verify vessel
     vessel_result = await db.execute(select(Vessel).where(Vessel.imo == imo))
@@ -158,62 +158,34 @@ async def screen_vessel(
             detail=f"Vessel with IMO {imo} not found",
         )
 
-    # Fetch all sanctions entries
-    entries_result = await db.execute(select(SanctionsEntry))
-    entries = list(entries_result.scalars().all())
+    agent = SanctionsScreeningAgent(db)
+    raw_matches = await agent.screen_vessel(imo)
+    await agent.save_matches(imo, raw_matches)
 
-    if not entries:
-        return ScreeningTriggerResponse(vessel_imo=imo, new_matches_found=0)
+    # Load with sanctions_entry relationships
+    matches_result = await db.execute(
+        select(SanctionsMatch)
+        .where(SanctionsMatch.vessel_imo == imo)
+        .options(selectinload(SanctionsMatch.sanctions_entry))
+        .order_by(SanctionsMatch.match_score.desc())
+    )
+    loaded_matches = list(matches_result.scalars().all())
 
-    sanctions_names = [e.entity_name for e in entries]
-    entry_by_name: dict[str, SanctionsEntry] = {
-        normalize_name(e.entity_name): e for e in entries
-    }
-
-    # Match vessel name
-    results = match_entity(vessel.name, sanctions_names, threshold=85.0)
-
-    new_matches: list[SanctionsMatch] = []
-    for mr in results:
-        norm = normalize_name(mr.matched_name)
-        entry = entry_by_name.get(norm)
-        if entry is None:
-            continue
-
-        match = SanctionsMatch(
-            vessel_imo=imo,
-            sanctions_entry_id=entry.id,
-            match_score=mr.score,
-            match_type=mr.match_type,
-            matched_field="vessel_name",
+    response_matches = [
+        SanctionsMatchResponse(
+            id=m.id,
+            vessel_imo=m.vessel_imo,
+            match_score=m.match_score,
+            match_type=m.match_type,
+            matched_field=m.matched_field,
+            sanctions_entry=SanctionsEntryBrief.model_validate(m.sanctions_entry),
         )
-        db.add(match)
-        new_matches.append(match)
-
-    if new_matches:
-        await db.commit()
-        # Refresh to get IDs
-        for m in new_matches:
-            await db.refresh(m)
-
-    # Reload with entries for response
-    response_matches: list[SanctionsMatchResponse] = []
-    for m in new_matches:
-        await db.refresh(m, attribute_names=["sanctions_entry"])
-        response_matches.append(
-            SanctionsMatchResponse(
-                id=m.id,
-                vessel_imo=m.vessel_imo,
-                match_score=m.match_score,
-                match_type=m.match_type,
-                matched_field=m.matched_field,
-                sanctions_entry=SanctionsEntryBrief.model_validate(m.sanctions_entry),
-            )
-        )
+        for m in loaded_matches
+    ]
 
     return ScreeningTriggerResponse(
         vessel_imo=imo,
         status="completed",
-        new_matches_found=len(new_matches),
+        new_matches_found=len(response_matches),
         matches=response_matches,
     )
