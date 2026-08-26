@@ -1,96 +1,38 @@
 # Changelog
 
-All notable changes to PortWatch are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+All notable changes to the PortWatch maritime OSINT platform will be documented in this file.
 
----
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Fixed
-
-#### Backend
-- **`dark_detection.py` — `point_in_polygon` variable-scope bug**
-  The ray-casting algorithm read `xints` before it was assigned when a
-  horizontal polygon edge (`p1y == p2y`) was encountered, causing the
-  crossing counter to toggle on stale data from the previous iteration.
-  The second condition is now nested inside the `if p1y != p2y:` block,
-  matching the canonical even-odd rule implementation.
-
-- **`ais_ingestion.py` — self-referential `OwnershipEdge`**
-  `populate_vessel_analytics` created `edge3` with
-  `source_entity_id == target_entity_id` (both pointing to `ent_owner`),
-  producing a circular self-loop that corrupted D3 graph rendering and
-  the risk agent's `_check_identity_changes` traversal. The edge is now
-  directed `ent_owner → ent_ubo` (`controlled_by`) to model the correct
-  top-down ownership chain.
-
-- **`enriched.py` — risk score selected by `id` instead of `calculated_at`**
-  When multiple risk scores exist for a vessel the latest was previously
-  chosen via `max(..., key=lambda x: x.id)`.  A manually triggered
-  recalculation with a lower auto-increment id (e.g. from a restored backup)
-  would be silently ignored.  The key is now `lambda x: x.calculated_at`.
-
-#### Frontend
-- **`useWebSocket.js` — full positions map replacement on every flush**
-  The 2-second flush interval replaced the entire positions state object
-  with only the vessels seen in the current batch.  Any vessel that sent
-  no update in the last 2 s was dropped, causing map markers to flicker.
-  Fixed by merging with the spread operator: `setPositions(prev => ({...prev, ...batch}))`.
-
-- **`useWebSocket.js` — broken timestamp sort**
-  The oversized-batch sort used `String.localeCompare` on ISO timestamp
-  strings, which produces incorrect ordering for strings of different
-  lengths.  Fixed with `new Date(b.ts) - new Date(a.ts)`.
-
-- **`useVessels.js` — stale `selectedVessel` after live position update**
-  Clicking a vessel stored a frozen object snapshot in `selectedVessel`.
-  When the live WebSocket position arrived, `vessels` was updated but the
-  detail panel continued to display the old heading/speed/position.
-  A `useEffect` now re-derives `selectedVessel` from the `vessels` array
-  whenever the array changes.
-
-- **`VesselPanel.jsx` — `toLocaleDateString` drops `hour`/`minute` options**
-  The ETA field used `toLocaleDateString` with `hour: '2-digit'` and
-  `minute: '2-digit'` options that this method silently ignores.
-  Replaced with `toLocaleString` which correctly formats date and time.
-
-- **`VesselPanel.jsx` — `undefined°` / `undefined kn` for null speed/heading**
-  Speed and heading fields rendered `"undefined kn"` / `"undefined°"` when
-  the API returned `null`.  Added `!= null` guards that fall back to `'—'`.
-
-- **`VesselMarker.jsx` — icon cache collision across risk bands**
-  The icon cache was keyed by `type|heading|selected`, so two vessels of
-  the same type and heading but different risk scores could share the same
-  cached icon object, skipping any risk-band-specific styling.  The key
-  now includes the risk band (`low|medium|high|critical`).
+## [1.1.0] - 2026-08-26
 
 ### Added
+- **Frontend Live Action Controls**: Interactive buttons in `VesselPanel` for manual risk score recalculation (`/api/vessels/{imo}/risk/calculate`), on-demand sanctions screening (`/api/vessels/{imo}/screen`), and instant PDF intelligence brief export (`/api/vessels/{imo}/report`).
+- **Live WebSocket Telemetry Badge**: Navbar indicator displaying real-time WebSocket connection state (green pulsating badge when live feed is connected).
+- **Quick Risk Triage Presets**: Sidebar filter shortcuts ("All Vessels", "High Risk 50+", "Tankers & Cargo") for rapid maritime intelligence triage.
+- **Factor 11 Loitering Anomaly Check**: Implemented automated loitering detection near ship-breaking yards and high-risk zones (+5 risk points) in `RiskScoringAgent`.
+- **Comprehensive Test Suites**:
+  - `backend/tests/test_name_matcher.py` (Unicode normalization, rapidfuzz score boundaries, and batch matching fallback).
+  - `backend/tests/test_sanctions_agent.py` (multi-stage sanctions screening, exact IMO matches, entity graph screening).
+  - `backend/tests/test_intel_report.py` (intel report context preparation, HTML template rendering, risk level categorization).
+  - `backend/tests/test_spoofing.py` (impossible speed jump detection and timestamp validations).
+  - `backend/tests/test_sts_detection.py` (port limits proximity checks and haversine distance fallbacks).
+  - `backend/tests/test_ws.py` (WebSocket connection management, broadcast serialization caching, and bounding box filtering).
+  - `backend/tests/test_reports_router.py` (report store bounds checking and traversal rejection).
+  - `frontend/src/utils/riskColors.test.js` & `frontend/src/utils/vesselTypes.test.js` (Node-native unit tests for color/type mappings).
 
-#### Backend
-- `tests/test_dark_detection.py` — unit tests for `point_in_polygon` and
-  `is_in_dead_zone`, including a direct regression for the
-  `xints`-before-assignment bug.
-- `tests/test_ais_ingestion.py` — regression test asserting that no
-  self-loop `OwnershipEdge` is created during vessel analytics population.
-- `tests/test_enriched.py` — tests for `_vessel_type_normalise`,
-  `_resolve_ownership_from_edges`, and `calculated_at`-based score selection.
+### Fixed
+- **React Rules of Hooks**: Fixed early return placement in `VesselPanel.jsx` that previously evaluated conditional returns before `useMemo(timeSinceLastSeen)`.
+- **Ownership Entity Resolution**: Corrected edge traversal logic in `enriched.py` to resolve beneficial owners and operators from `source_entity` rather than incorrectly overwriting them with target entity names.
+- **Null Timestamp Safety**: Added safe fallbacks for uninitialized `vessel.updated_at` timestamps in `enriched.py`.
+- **Sanctions Screening Deduplication**: Routed `/api/vessels/{imo}/screen` through `SanctionsScreeningAgent` with clean stale match replacements and multi-stage screening.
+- **RapidFuzz Index Lookup**: Fixed entity name retrieval from extraction index in `name_matcher.py` to prevent normalized name collisions.
+- **Intel Report Field Mappings**: Fixed field references in `intel_report.html` and eager-loaded `sanctions_entry` in `IntelReportAgent._get_sanctions`.
+- **Polygon Ray-Casting**: Added bounds checking for empty or malformed rings (< 3 vertices) in `dark_detection.py` and coordinate validation in `spoofing.py` and `sts_detection.py`.
+- **Report Store Memory Management**: Bounded in-memory report store in `reports.py` to prevent unbounded memory growth on long-running servers.
 
-### Improved
-
-#### Backend
-- **`enriched.py` — extracted `_resolve_ownership_from_edges` helper**
-  The inline edge-resolution loop is now a standalone, unit-testable
-  module-level function.  Edges are grouped by vessel IMO before the
-  helper is called, eliminating the per-edge dict lookup.
-
-#### Frontend
-- **`VesselPanel.jsx`** — tab bar now carries `role="tablist"`,
-  `role="tab"`, and `aria-selected` for screen-reader compatibility.
-- **`RiskBreakdown.jsx`** — risk score SVG ring has `role="img"` and a
-  descriptive `aria-label` (e.g. "Risk score 72 out of 100 — HIGH").
-- **`VesselSearch.jsx`** — results list has `role="listbox"` and each
-  item has `role="option"` with `aria-selected` reflecting keyboard focus.
-- **`Sidebar.jsx`** — risk range inputs clamp so `riskMin` cannot exceed
-  `riskMax` and vice versa, preventing an inverted range that produces an
-  empty vessel list with no user feedback.
+### Performance
+- **Name Normalization LRU Cache**: Added `@lru_cache(maxsize=16384)` to `normalize_name` in `name_matcher.py`.
+- **DivIcon Cache Capping**: Capped SVG marker icon cache in `VesselMarker.jsx` to prevent DOM node leaks.
+- **WebSocket Broadcast Optimization**: Implemented single-pass JSON serialization for unfiltered WebSocket clients.
