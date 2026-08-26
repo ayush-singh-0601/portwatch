@@ -48,6 +48,9 @@ def is_in_dead_zone(lat: float, lon: float, dead_zones: list[dict]) -> bool:
     
     Uses a simple ray-casting algorithm for point-in-polygon checks.
     """
+    if lat is None or lon is None or not dead_zones:
+        return False
+
     for feature in dead_zones:
         geom = feature.get("geometry", {})
         if geom.get("type") == "Polygon":
@@ -72,6 +75,9 @@ def point_in_polygon(x: float, y: float, poly: list[list[float]]) -> bool:
     which avoids reading ``xints`` from a previous loop iteration when a
     horizontal edge is encountered.
     """
+    if not poly or len(poly) < 3:
+        return False
+
     n = len(poly)
     inside = False
     p1x, p1y = poly[0]
