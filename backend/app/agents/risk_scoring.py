@@ -131,10 +131,9 @@ class RiskScoringAgent:
             factors.append(factor)
 
         # ── Factor 11: Loitering near ship-breaking yard (+5) ─────
-        # Placeholder — depends on loitering events table
-        # factor = await self._check_loitering(vessel_imo)
-        # if factor:
-        #     factors.append(factor)
+        factor = await self._check_loitering(vessel_imo, vessel)
+        if factor:
+            factors.append(factor)
 
         # Sum and cap at 100
         total = min(100, sum(f.points for f in factors))
@@ -403,4 +402,29 @@ class RiskScoringAgent:
                     f"Vessels over 20 years are higher risk."
                 ),
             )
+        return None
+
+    async def _check_loitering(
+        self, vessel_imo: int, vessel: Vessel
+    ) -> Optional[RiskFactor]:
+        """Loitering near ship-breaking yard or sanctioned port → +5."""
+        if not vessel.mmsi:
+            return None
+        try:
+            from app.services.spoofing import AISAnomalyDetector
+            detector = AISAnomalyDetector(self.db)
+            loitering_events = await detector.detect_loitering(vessel_imo, vessel.mmsi)
+            if loitering_events:
+                count = len(loitering_events)
+                total_hrs = sum(e.get("duration_hours", 0) for e in loitering_events)
+                return RiskFactor(
+                    factor_name="loitering_near_risk_zone",
+                    points=5,
+                    evidence_description=(
+                        f"{count} loitering event(s) detected near ship-breaking yards "
+                        f"or high-risk zones (total: {total_hrs:.1f} hours)."
+                    ),
+                )
+        except Exception:
+            pass
         return None
