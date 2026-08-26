@@ -84,13 +84,15 @@ def _resolve_ownership_from_edges(edges: list) -> dict:
     }
     for edge in edges:
         rel = (edge.relationship_type or "").lower()
-        entity_name = edge.target_entity.name if edge.target_entity else None
+        src_name = edge.source_entity.name if edge.source_entity else None
+        tgt_name = edge.target_entity.name if edge.target_entity else None
+
         if "beneficial" in rel:
-            result["beneficialOwner"] = entity_name
-        elif "owner" in rel:
-            result["registeredOwner"] = entity_name
+            result["beneficialOwner"] = src_name or tgt_name
         elif "operator" in rel or "manager" in rel:
-            result["operator"] = entity_name
+            result["operator"] = src_name or tgt_name
+        elif "registered" in rel or "owner" in rel:
+            result["registeredOwner"] = tgt_name or src_name
     return result
 
 
