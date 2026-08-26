@@ -71,6 +71,49 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
         <span className="sidebar-count-label">of {totalCount} vessels</span>
       </div>
 
+      {/* Quick Presets */}
+      <div className="sidebar-section">
+        <h4 className="sidebar-section-title">Quick Presets</h4>
+        <div className="sidebar-presets">
+          <button
+            className="sidebar-preset-btn"
+            onClick={() =>
+              onFiltersChange({
+                types: ['cargo', 'tanker', 'fishing', 'passenger', 'other'],
+                riskMin: 0,
+                riskMax: 100,
+              })
+            }
+          >
+            All Vessels
+          </button>
+          <button
+            className="sidebar-preset-btn"
+            onClick={() =>
+              onFiltersChange({
+                types: ['cargo', 'tanker', 'fishing', 'passenger', 'other'],
+                riskMin: 50,
+                riskMax: 100,
+              })
+            }
+          >
+            High Risk (50+)
+          </button>
+          <button
+            className="sidebar-preset-btn"
+            onClick={() =>
+              onFiltersChange({
+                types: ['tanker', 'cargo'],
+                riskMin: 0,
+                riskMax: 100,
+              })
+            }
+          >
+            Tankers & Cargo
+          </button>
+        </div>
+      </div>
+
       {/* Vessel type filter */}
       <div className="sidebar-section">
         <h4 className="sidebar-section-title">Vessel Type</h4>

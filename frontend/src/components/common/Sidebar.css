@@ -207,6 +207,31 @@
   transition: left var(--transition-fast), width var(--transition-fast);
 }
 
+/* ── Presets ───────────────────────────────────────────────── */
+.sidebar-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sidebar-preset-btn {
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-preset-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
 /* ── Reset ─────────────────────────────────────────────────── */
 .sidebar-reset {
   margin-top: auto;
