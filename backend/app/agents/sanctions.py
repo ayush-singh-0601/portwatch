@@ -211,7 +211,13 @@ class SanctionsScreeningAgent:
             self.db.add(db_match)
             db_matches.append(db_match)
 
-        await self.db.commit()
+        if db_matches:
+            await self.db.commit()
+            for match in db_matches:
+                await self.db.refresh(match)
+        else:
+            await self.db.commit()
+
         logger.info("Saved %d sanctions matches for vessel IMO %d", len(db_matches), vessel_imo)
         return db_matches
 
@@ -240,8 +246,10 @@ class SanctionsScreeningAgent:
     def _find_entry_by_name(
         self, sanctions: list[SanctionsEntry], name: str
     ) -> SanctionsEntry | None:
-        """Find a sanctions entry by exact entity name."""
+        """Find a sanctions entry by exact entity name or normalized match."""
+        from app.services.name_matcher import normalize_name
+        target_norm = normalize_name(name)
         for entry in sanctions:
-            if entry.entity_name == name:
+            if entry.entity_name == name or normalize_name(entry.entity_name) == target_norm:
                 return entry
         return None
