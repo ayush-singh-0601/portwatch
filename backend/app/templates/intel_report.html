@@ -388,8 +388,8 @@
         <tbody>
             {% for match in sanctions_matches %}
             <tr>
-                <td>{{ match.matched_field or 'N/A' }}</td>
-                <td>{{ match.source or 'N/A' }}</td>
+                <td>{{ match.sanctions_entry.entity_name if match.sanctions_entry else (match.matched_entity_name or match.matched_field or 'N/A') }}</td>
+                <td>{{ match.sanctions_entry.source if match.sanctions_entry else (match.sanctions_source or 'N/A') }}</td>
                 <td>{{ match.match_type }}</td>
                 <td class="mono">{{ "%.1f" | format(match.match_score) }}%</td>
             </tr>
