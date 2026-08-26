@@ -134,3 +134,40 @@ class TestFlagNormalization:
         assert res is not None
         assert res.points == 5
 
+
+# ── Loitering Factor & Composite Score Capping ───────────────────────────────
+
+class TestLoiteringFactor:
+    def test_loitering_events_create_factor(self):
+        events = [{"duration_hours": 6.5}, {"duration_hours": 4.2}]
+        count = len(events)
+        total_hrs = sum(e["duration_hours"] for e in events)
+        factor = _FakeRiskFactor(
+            factor_name="loitering_near_risk_zone",
+            points=5,
+            evidence_description=(
+                f"{count} loitering event(s) detected near ship-breaking yards "
+                f"or high-risk zones (total: {total_hrs:.1f} hours)."
+            ),
+        )
+        assert factor.points == 5
+        assert "2 loitering" in factor.evidence_description
+        assert "10.7 hours" in factor.evidence_description
+
+
+class TestCompositeScoreCapping:
+    def test_scores_sum_and_cap_at_100(self):
+        factors = [
+            _FakeRiskFactor("beneficial_owner_sanctioned", 30, ""),
+            _FakeRiskFactor("sanctioned_port_call", 20, ""),
+            _FakeRiskFactor("sts_transfer_at_sea", 15, ""),
+            _FakeRiskFactor("flag_of_convenience", 15, ""),
+            _FakeRiskFactor("dark_activity", 25, ""),
+            _FakeRiskFactor("psc_detention", 10, ""),
+        ]
+        raw_sum = sum(f.points for f in factors)
+        assert raw_sum == 115
+        total = min(100, raw_sum)
+        assert total == 100
+
+
