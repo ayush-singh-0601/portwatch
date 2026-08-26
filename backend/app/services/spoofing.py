@@ -70,9 +70,18 @@ class AISAnomalyDetector:
         if len(positions) < 2:
             return anomalies
 
-        for i in range(len(positions) - 1):
             pos_a = positions[i]
             pos_b = positions[i + 1]
+
+            if (
+                pos_a.time is None
+                or pos_b.time is None
+                or pos_a.latitude is None
+                or pos_a.longitude is None
+                or pos_b.latitude is None
+                or pos_b.longitude is None
+            ):
+                continue
 
             time_diff = (pos_b.time - pos_a.time).total_seconds()
             if time_diff <= 0:
