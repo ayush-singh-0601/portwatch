@@ -44,7 +44,7 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
         setActiveIndex((prev) => Math.max(prev - 1, 0))
       } else if (e.key === 'Enter' && results.length > 0) {
         e.preventDefault()
-        onSelect(results[activeIndex])
+        onSelect(results[activeIndex] || results[0])
       } else if (e.key === 'Escape') {
         onClose()
       }
