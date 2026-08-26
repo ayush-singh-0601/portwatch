@@ -336,3 +336,50 @@
   font-size: 0.75rem;
   font-weight: 500;
 }
+
+/* ── Vessel Panel Action Buttons ─────────────────────────── */
+.vessel-panel-actions {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-lg);
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+
+.vessel-panel-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.vessel-panel-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--border-hover);
+}
+
+.vessel-panel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vessel-panel-btn-primary {
+  background: var(--primary, #6366f1);
+  border-color: var(--primary, #6366f1);
+  color: #fff;
+}
+
+.vessel-panel-btn-primary:hover:not(:disabled) {
+  background: #4f46e5;
+}

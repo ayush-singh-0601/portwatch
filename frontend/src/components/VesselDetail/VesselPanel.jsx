@@ -3,6 +3,7 @@ import RiskBadge from './RiskBadge'
 import RiskBreakdown from './RiskBreakdown'
 import IdentityCard from './IdentityCard'
 import OwnershipGraph from './OwnershipGraph'
+import { calculateRisk, generateReport, screenSanctions } from '../../services/api'
 import { getVesselBadgeClass, getVesselLabel } from '../../utils/vesselTypes'
 import './VesselPanel.css'
 
@@ -10,6 +11,9 @@ const TABS = ['Overview', 'Ownership', 'Sanctions', 'History']
 
 export default function VesselPanel({ vessel, onClose }) {
   const [activeTab, setActiveTab] = useState('Overview')
+  const [isRecalculating, setIsRecalculating] = useState(false)
+  const [isScreening, setIsScreening] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   // Computed once per lastSeen change, not on every render.
   // Without useMemo this Date.now() call ran on every 2-second WebSocket
@@ -25,6 +29,45 @@ export default function VesselPanel({ vessel, onClose }) {
     if (hrs < 24) return `${hrs}h ago`
     return `${Math.floor(hrs / 24)}d ago`
   }, [vessel?.lastSeen])
+
+  const handleRecalculateRisk = async () => {
+    if (!vessel?.imo || isRecalculating) return
+    try {
+      setIsRecalculating(true)
+      await calculateRisk(vessel.imo)
+    } catch (err) {
+      console.error('Failed to recalculate risk:', err)
+    } finally {
+      setIsRecalculating(false)
+    }
+  }
+
+  const handleScreenSanctions = async () => {
+    if (!vessel?.imo || isScreening) return
+    try {
+      setIsScreening(true)
+      await screenSanctions(vessel.imo)
+    } catch (err) {
+      console.error('Failed to screen sanctions:', err)
+    } finally {
+      setIsScreening(false)
+    }
+  }
+
+  const handleExportReport = async () => {
+    if (!vessel?.imo || isExporting) return
+    try {
+      setIsExporting(true)
+      const res = await generateReport(vessel.imo, 'pdf')
+      if (res?.download_url) {
+        window.open(res.download_url, '_blank')
+      }
+    } catch (err) {
+      console.error('Failed to generate report:', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   if (!vessel) return null
 
@@ -299,6 +342,34 @@ export default function VesselPanel({ vessel, onClose }) {
             )}
           </div>
         )}
+      </div>
+
+      {/* Action Bar */}
+      <div className="vessel-panel-actions">
+        <button
+          className="vessel-panel-btn"
+          onClick={handleRecalculateRisk}
+          disabled={isRecalculating}
+          title="Recalculate risk score using latest AIS positions and events"
+        >
+          {isRecalculating ? 'Scoring...' : 'Recalculate Risk'}
+        </button>
+        <button
+          className="vessel-panel-btn"
+          onClick={handleScreenSanctions}
+          disabled={isScreening}
+          title="Screen vessel and ownership entities against OFAC, EU, UN, and OFSI lists"
+        >
+          {isScreening ? 'Screening...' : 'Screen Sanctions'}
+        </button>
+        <button
+          className="vessel-panel-btn vessel-panel-btn-primary"
+          onClick={handleExportReport}
+          disabled={isExporting}
+          title="Generate and download full PDF intelligence report"
+        >
+          {isExporting ? 'Generating...' : 'Export Intel Report'}
+        </button>
       </div>
     </div>
   )
