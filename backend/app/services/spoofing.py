@@ -70,6 +70,7 @@ class AISAnomalyDetector:
         if len(positions) < 2:
             return anomalies
 
+        for i in range(len(positions) - 1):
             pos_a = positions[i]
             pos_b = positions[i + 1]
 
