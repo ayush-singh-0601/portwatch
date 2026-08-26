@@ -13,6 +13,7 @@ export default function App() {
     searchResults,
     selectedVessel,
     loading,
+    wsConnected,
     searchVessels,
     selectVessel,
     clearSelection,
@@ -91,6 +92,7 @@ export default function App() {
     <>
       <Navbar
         vesselCount={filteredVessels.length}
+        wsConnected={wsConnected}
         onSearchClick={() => setSearchOpen(true)}
         onSidebarToggle={() => setSidebarOpen((prev) => !prev)}
       />

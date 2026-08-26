@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react'
 import './Navbar.css'
 
-export default function Navbar({ vesselCount = 0, onSearchClick, onSidebarToggle }) {
+export default function Navbar({
+  vesselCount = 0,
+  wsConnected = false,
+  onSearchClick,
+  onSidebarToggle,
+}) {
   const [displayCount, setDisplayCount] = useState(0)
   const [shortcutText, setShortcutText] = useState('⌘K')
 
@@ -50,9 +55,17 @@ export default function Navbar({ vesselCount = 0, onSearchClick, onSidebarToggle
 
       <div className="navbar-center">
         <div className="navbar-stat">
-          <div className="navbar-stat-dot" />
+          <div
+            className="navbar-stat-dot"
+            style={{
+              background: wsConnected ? 'var(--success, #10b981)' : 'var(--warning, #f59e0b)',
+              boxShadow: wsConnected ? '0 0 8px #10b981' : 'none',
+            }}
+          />
           <span className="navbar-stat-count">{displayCount}</span>
-          <span className="navbar-stat-label">Vessels Tracked</span>
+          <span className="navbar-stat-label">
+            {wsConnected ? 'Live Vessels' : 'Tracked Vessels'}
+          </span>
         </div>
       </div>
 
