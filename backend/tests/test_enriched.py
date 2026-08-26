@@ -50,13 +50,15 @@ def _resolve_ownership_from_edges(edges):
     }
     for edge in edges:
         rel = (edge.relationship_type or "").lower()
-        entity_name = edge.target_entity.name if edge.target_entity else None
+        src_name = edge.source_entity.name if hasattr(edge, "source_entity") and edge.source_entity else None
+        tgt_name = edge.target_entity.name if hasattr(edge, "target_entity") and edge.target_entity else None
+
         if "beneficial" in rel:
-            result["beneficialOwner"] = entity_name
-        elif "owner" in rel:
-            result["registeredOwner"] = entity_name
+            result["beneficialOwner"] = src_name or tgt_name
         elif "operator" in rel or "manager" in rel:
-            result["operator"] = entity_name
+            result["operator"] = src_name or tgt_name
+        elif "registered" in rel or "owner" in rel:
+            result["registeredOwner"] = tgt_name or src_name
     return result
 
 
@@ -102,9 +104,10 @@ class _FakeEntity:
 
 
 class _FakeEdge:
-    def __init__(self, rel_type, target_name):
+    def __init__(self, rel_type, target_name="", source_name=""):
         self.relationship_type = rel_type
-        self.target_entity = _FakeEntity(target_name)
+        self.target_entity = _FakeEntity(target_name) if target_name else None
+        self.source_entity = _FakeEntity(source_name) if source_name else None
 
 
 class TestResolveOwnershipFromEdges:
@@ -117,33 +120,38 @@ class TestResolveOwnershipFromEdges:
             "flagHistory": [],
         }
 
-    def test_beneficial_owner_edge(self):
-        edges = [_FakeEdge("beneficial_owner", "Global Holdings")]
+    def test_beneficial_owner_from_source_entity(self):
+        edges = [_FakeEdge("beneficial_owner", source_name="UBO Alpha Corp")]
+        result = _resolve_ownership_from_edges(edges)
+        assert result["beneficialOwner"] == "UBO Alpha Corp"
+
+    def test_beneficial_owner_edge_target_fallback(self):
+        edges = [_FakeEdge("beneficial_owner", target_name="Global Holdings")]
         result = _resolve_ownership_from_edges(edges)
         assert result["beneficialOwner"] == "Global Holdings"
         assert result["registeredOwner"] is None
 
     def test_owner_edge(self):
-        edges = [_FakeEdge("owner", "Registered Corp")]
+        edges = [_FakeEdge("owner", target_name="Registered Corp")]
         result = _resolve_ownership_from_edges(edges)
         assert result["registeredOwner"] == "Registered Corp"
         assert result["beneficialOwner"] is None
 
-    def test_operator_edge(self):
-        edges = [_FakeEdge("operator", "Pacific Ops")]
+    def test_operator_from_source_entity(self):
+        edges = [_FakeEdge("operator", source_name="Pacific Ops Management")]
         result = _resolve_ownership_from_edges(edges)
-        assert result["operator"] == "Pacific Ops"
+        assert result["operator"] == "Pacific Ops Management"
 
     def test_manager_edge_maps_to_operator(self):
-        edges = [_FakeEdge("manager", "Fleet Manager Ltd")]
+        edges = [_FakeEdge("manager", target_name="Fleet Manager Ltd")]
         result = _resolve_ownership_from_edges(edges)
         assert result["operator"] == "Fleet Manager Ltd"
 
     def test_multiple_edges_all_resolved(self):
         edges = [
-            _FakeEdge("owner", "Ship Owner Inc"),
-            _FakeEdge("beneficial_owner", "UBO Trust"),
-            _FakeEdge("operator", "Ops SA"),
+            _FakeEdge("owner", target_name="Ship Owner Inc"),
+            _FakeEdge("beneficial_owner", source_name="UBO Trust"),
+            _FakeEdge("operator", source_name="Ops SA"),
         ]
         result = _resolve_ownership_from_edges(edges)
         assert result["registeredOwner"] == "Ship Owner Inc"
@@ -151,10 +159,21 @@ class TestResolveOwnershipFromEdges:
         assert result["operator"] == "Ops SA"
 
     def test_null_target_entity_handled_gracefully(self):
-        edge = _FakeEdge("owner", "")
-        edge.target_entity = None
+        edge = _FakeEdge("owner")
         result = _resolve_ownership_from_edges([edge])
         assert result["registeredOwner"] is None
+
+
+class TestLastSeenTimestamp:
+    def test_null_updated_at_falls_back_to_current_time(self):
+        class _FakeVesselWithNullDate:
+            updated_at = None
+
+        v = _FakeVesselWithNullDate()
+        pos = None
+        last_seen = pos.time.isoformat() if pos else (v.updated_at.isoformat() if v.updated_at else datetime.now(timezone.utc).isoformat())
+        assert last_seen is not None
+        assert "T" in last_seen
 
 
 # ── Risk score ordering ───────────────────────────────────────────────────────
