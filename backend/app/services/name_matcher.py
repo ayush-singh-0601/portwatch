@@ -15,9 +15,10 @@ Usage::
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from functools import lru_cache
 import re
 import unicodedata
-from dataclasses import dataclass
 
 from rapidfuzz import fuzz, process
 
@@ -38,6 +39,7 @@ class MatchResult:
     match_type: str
 
 
+@lru_cache(maxsize=16384)
 def normalize_name(name: str) -> str:
     """Normalize a name for comparison.
 
@@ -60,6 +62,9 @@ def normalize_name(name: str) -> str:
         >>> normalize_name("Al-Quds Corp.")
         'alquds corp'
     """
+    if not name:
+        return ""
+
     # NFKD decomposition
     text = unicodedata.normalize("NFKD", name)
 
