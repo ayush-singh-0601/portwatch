@@ -28,6 +28,11 @@ function createVesselIcon(vesselType, heading, isSelected, riskScore) {
   const cached = iconCache.get(cacheKey)
   if (cached) return cached
 
+  if (iconCache.size > 500) {
+    const firstKey = iconCache.keys().next().value
+    if (firstKey) iconCache.delete(firstKey)
+  }
+
   const html = `
     <div class="vessel-icon-shell" style="--vessel-color: ${color}; --vessel-size: ${size}px; transform: rotate(${rotation}deg);">
       <svg width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true">
