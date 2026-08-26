@@ -62,8 +62,9 @@ class ConnectionManager:
         Args:
             websocket: The disconnected WebSocket.
         """
-        self._connections.pop(id(websocket), None)
-        logger.info("WebSocket client disconnected. Total: %d", len(self._connections))
+        removed = self._connections.pop(id(websocket), None)
+        if removed:
+            logger.info("WebSocket client disconnected. Total: %d", len(self._connections))
 
     def update_bbox(self, websocket: WebSocket, bbox: list[float] | None) -> None:
         """Update the bounding-box filter for a client.
@@ -122,7 +123,7 @@ class ConnectionManager:
         # Lazy-serialized string shared by all clients with no bbox filter.
         unfiltered_message: str | None = None
 
-        for ws_id, client in self._connections.items():
+        for ws_id, client in list(self._connections.items()):
             payload = self._filter_payload_for_client(position_data, client)
             if payload is None:
                 continue
@@ -191,7 +192,8 @@ async def vessel_position_stream(websocket: WebSocket) -> None:
                     json.dumps({"error": f"Invalid message: {exc}"})
                 )
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        pass
     except Exception:
-        manager.disconnect(websocket)
         logger.exception("WebSocket error")
+    finally:
+        manager.disconnect(websocket)
