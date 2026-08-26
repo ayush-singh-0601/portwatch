@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import RiskBadge from './RiskBadge'
 import RiskBreakdown from './RiskBreakdown'
 import IdentityCard from './IdentityCard'
 import OwnershipGraph from './OwnershipGraph'
-import { calculateRisk, generateReport, screenSanctions } from '../../services/api'
+import { calculateRisk, generateReport, getOwnership, screenSanctions } from '../../services/api'
 import { getVesselBadgeClass, getVesselLabel } from '../../utils/vesselTypes'
 import './VesselPanel.css'
 
@@ -14,6 +14,26 @@ export default function VesselPanel({ vessel, onClose }) {
   const [isRecalculating, setIsRecalculating] = useState(false)
   const [isScreening, setIsScreening] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [ownershipGraph, setOwnershipGraph] = useState(null)
+
+  // Fetch ownership graph from API when Ownership tab is selected
+  useEffect(() => {
+    if (activeTab !== 'Ownership' || !vessel?.imo) return
+    let isMounted = true
+    getOwnership(vessel.imo)
+      .then((data) => {
+        if (isMounted && data) {
+          setOwnershipGraph(data)
+        }
+      })
+      .catch(() => {
+        // Fallback to mock data handled in OwnershipGraph
+        if (isMounted) setOwnershipGraph(null)
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [activeTab, vessel?.imo])
 
   // Computed once per lastSeen change, not on every render.
   // Without useMemo this Date.now() call ran on every 2-second WebSocket
@@ -247,7 +267,7 @@ export default function VesselPanel({ vessel, onClose }) {
               </div>
             )}
 
-            <OwnershipGraph vessel={vessel} />
+            <OwnershipGraph vessel={vessel} graphData={ownershipGraph} />
           </div>
         )}
 
