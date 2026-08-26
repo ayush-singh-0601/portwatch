@@ -302,7 +302,7 @@ async def get_enriched_vessels(
             "yearBuilt": vessel.year_built,
             "length": None,   # Not in DB schema
             "beam": None,     # Not in DB schema
-            "lastSeen": pos.time.isoformat() if pos else vessel.updated_at.isoformat(),
+            "lastSeen": pos.time.isoformat() if pos else (vessel.updated_at.isoformat() if vessel.updated_at else datetime.now(timezone.utc).isoformat()),
             "destination": None,  # Not in DB schema
             "eta": None,          # Not in DB schema
             "ownership": ownership,
