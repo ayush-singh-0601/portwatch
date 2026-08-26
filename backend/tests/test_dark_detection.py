@@ -228,3 +228,20 @@ class TestFastPathGapSkip:
         detector._is_coastal_position.assert_not_called()
 
 
+# ── Polygon Boundary & Malformed Inputs ──────────────────────────────────────
+
+class TestPolygonEdgeCases:
+    def test_empty_polygon_returns_false(self):
+        assert point_in_polygon(0.0, 0.0, []) is False
+        assert point_in_polygon(0.0, 0.0, None) is False
+
+    def test_malformed_ring_less_than_3_vertices(self):
+        assert point_in_polygon(0.0, 0.0, [[0.0, 0.0], [1.0, 1.0]]) is False
+
+    def test_is_in_dead_zone_null_coords(self):
+        assert is_in_dead_zone(None, 0.0, [{"geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1]]]}}]) is False
+        assert is_in_dead_zone(0.0, None, [{"geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1]]]}}]) is False
+        assert is_in_dead_zone(0.5, 0.5, []) is False
+
+
+
