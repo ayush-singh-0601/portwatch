@@ -42,3 +42,12 @@ reports/
 # Logs
 *.log
 .commit-discipline/
+*.commit-discipline.bak
+
+# Agent & IDE tools
+.agents/
+.claude/
+.codex/
+.cursor/
+.mcp.json
+.nextcommit/

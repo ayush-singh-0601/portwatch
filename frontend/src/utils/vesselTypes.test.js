@@ -14,6 +14,12 @@ test('getVesselColor returns correct color or fallback', () => {
   assert.equal(getVesselColor('unknown_type'), VESSEL_TYPES.other.color)
 })
 
+test('getVesselColorVar returns correct CSS variable or fallback', () => {
+  assert.equal(getVesselColorVar('cargo'), VESSEL_TYPES.cargo.colorVar)
+  assert.equal(getVesselColorVar('tanker'), VESSEL_TYPES.tanker.colorVar)
+  assert.equal(getVesselColorVar('unknown_type'), VESSEL_TYPES.other.colorVar)
+})
+
 test('getVesselLabel returns human-readable label', () => {
   assert.equal(getVesselLabel('cargo'), 'Cargo')
   assert.equal(getVesselLabel('tanker'), 'Tanker')

@@ -164,36 +164,38 @@ def batch_match(
     normalized_entities = [normalize_name(e) for e in entities]
     normalized_sanctions = [normalize_name(s) for s in sanctions]
 
-    # Compute the full distance matrix
-    score_matrix = process.cdist(
-        queries=normalized_entities,
-        choices=normalized_sanctions,
-        scorer=fuzz.WRatio,
-        workers=-1,
-    )
-
     results: dict[str, list[MatchResult]] = {}
 
-    for i, entity_name in enumerate(entities):
-        entity_matches: list[MatchResult] = []
-        for j, sanctions_name in enumerate(sanctions):
-            score = float(score_matrix[i][j])
-            if score >= threshold:
-                if score >= 99.5:
-                    match_type = "exact"
-                else:
-                    match_type = "fuzzy"
+    try:
+        score_matrix = process.cdist(
+            queries=normalized_entities,
+            choices=normalized_sanctions,
+            scorer=fuzz.WRatio,
+            workers=-1,
+        )
 
-                entity_matches.append(
-                    MatchResult(
-                        matched_name=sanctions_name,
-                        score=round(score, 2),
-                        match_type=match_type,
+        for i, entity_name in enumerate(entities):
+            entity_matches: list[MatchResult] = []
+            for j, sanctions_name in enumerate(sanctions):
+                score = float(score_matrix[i][j])
+                if score >= threshold:
+                    match_type = "exact" if score >= 99.5 else "fuzzy"
+                    entity_matches.append(
+                        MatchResult(
+                            matched_name=sanctions_name,
+                            score=round(score, 2),
+                            match_type=match_type,
+                        )
                     )
-                )
 
-        entity_matches.sort(key=lambda r: r.score, reverse=True)
-        results[entity_name] = entity_matches
+            entity_matches.sort(key=lambda r: r.score, reverse=True)
+            results[entity_name] = entity_matches
+
+    except (ImportError, ModuleNotFoundError, Exception):
+        for entity_name in entities:
+            results[entity_name] = match_entity(
+                entity_name, sanctions, threshold=threshold
+            )
 
     return results
 
