@@ -173,7 +173,10 @@ class IntelReportAgent:
     async def _get_sanctions(self, imo: int) -> list:
         try:
             result = await self.db.execute(
-                select(SanctionsMatch).where(SanctionsMatch.vessel_imo == imo)
+                select(SanctionsMatch)
+                .where(SanctionsMatch.vessel_imo == imo)
+                .options(selectinload(SanctionsMatch.sanctions_entry))
+                .order_by(SanctionsMatch.match_score.desc())
             )
             return list(result.scalars().all())
         except Exception:
