@@ -78,6 +78,16 @@ export async function getRiskScore(imo) {
   return api.get(`/vessels/${imo}/risk`)
 }
 
+/** Recalculate risk score breakdown */
+export async function calculateRisk(imo) {
+  return api.post(`/vessels/${imo}/risk/calculate`)
+}
+
+/** Screen vessel against sanctions lists */
+export async function screenSanctions(imo) {
+  return api.post(`/vessels/${imo}/screen`)
+}
+
 /** Generate investigation report */
 export async function generateReport(imo, format = 'pdf') {
   return api.post(`/vessels/${imo}/report`, { format })
