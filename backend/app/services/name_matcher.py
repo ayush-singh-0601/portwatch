@@ -102,9 +102,6 @@ def match_entity(
     normalized_input = normalize_name(name)
     normalized_sanctions = [normalize_name(s) for s in sanctions_list]
 
-    # Build a mapping from normalized -> original name
-    norm_to_orig: dict[str, str] = dict(zip(normalized_sanctions, sanctions_list))
-
     matches = process.extract(
         query=normalized_input,
         choices=normalized_sanctions,
@@ -114,8 +111,8 @@ def match_entity(
     )
 
     results: list[MatchResult] = []
-    for matched_norm, score, _idx in matches:
-        original_name = norm_to_orig.get(matched_norm, matched_norm)
+    for matched_norm, score, idx in matches:
+        original_name = sanctions_list[idx] if 0 <= idx < len(sanctions_list) else matched_norm
 
         # Classify match type
         if score >= 99.5:
