@@ -132,11 +132,9 @@ class STSTransferDetector:
     async def _get_vessel_imo(self, mmsi: int) -> Optional[int]:
         """Look up the IMO number of a vessel by its MMSI."""
         result = await self.db.execute(
-            text("SELECT imo FROM vessels WHERE mmsi = :mmsi LIMIT 1"),
-            {"mmsi": mmsi}
+            select(Vessel.imo).where(Vessel.mmsi == mmsi).limit(1)
         )
-        row = result.fetchone()
-        return row[0] if row else None
+        return result.scalar_one_or_none()
 
     async def _check_in_port_limits(self, lat: float, lon: float) -> bool:
         """Determine if coordinates are within designated port limits (5 km).
@@ -155,6 +153,9 @@ class STSTransferDetector:
         Returns:
             True if within 5 km of any known port, False otherwise.
         """
+        if lat is None or lon is None:
+            return False
+
         radius_m = _PORT_LIMIT_RADIUS_KM * 1000.0
 
         try:
