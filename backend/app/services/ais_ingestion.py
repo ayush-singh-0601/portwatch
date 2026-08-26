@@ -20,7 +20,11 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.config import settings
 from app.database import async_session_factory
+from app.models.ownership import OwnershipEdge, OwnershipEntity
+from app.models.port_call import PortCall
 from app.models.position import VesselPosition
+from app.models.risk_score import RiskFactor, RiskScore
+from app.models.sanctions import SanctionsEntry, SanctionsMatch
 from app.models.vessel import Vessel
 from app.routers.ws import manager
 from app.services.ais_decoder import (
@@ -265,11 +269,7 @@ async def _populate_analytics_bg(vessel_imo: int) -> None:
 async def populate_vessel_analytics(db: Any, vessel: Vessel) -> None:
     """Populate a newly registered vessel with realistic, dynamic analytics (ownership, risk, sanctions, port calls)."""
     try:
-        from datetime import datetime, timezone, timedelta
-        from app.models.ownership import OwnershipEntity, OwnershipEdge
-        from app.models.port_call import PortCall
-        from app.models.sanctions import SanctionsEntry, SanctionsMatch
-        from app.models.risk_score import RiskScore, RiskFactor
+        from datetime import timedelta
 
         # 1. Create corporate ownership entities and edges
         companies = [

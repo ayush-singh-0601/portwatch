@@ -35,8 +35,13 @@ pytestmark = pytest.mark.skipif(
 
 class _FakeEntity:
     """Minimal stub for OwnershipEntity."""
-    def __init__(self, eid: int, name: str):
-        self.id = eid
+    name = MagicMock()
+
+    _counter = 0
+
+    def __init__(self, name: str = "", eid: int | None = None, **kwargs):
+        _FakeEntity._counter += 1
+        self.id = eid if eid is not None else _FakeEntity._counter
         self.name = name
 
 
