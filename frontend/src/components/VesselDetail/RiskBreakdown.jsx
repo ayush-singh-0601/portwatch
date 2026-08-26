@@ -173,8 +173,6 @@ export default function RiskBreakdown({ vessel }) {
     return mockFactors
   }, [vessel, score])
 
-  const totalFromFactors = factors.reduce((sum, f) => sum + f.points, 0)
-
   return (
     <div className="risk-breakdown">
       {/* Score header */}

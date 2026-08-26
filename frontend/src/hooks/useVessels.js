@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { MOCK_VESSELS } from '../utils/mockData'
 import useWebSocket from './useWebSocket'
 

@@ -11,15 +11,12 @@ const TABS = ['Overview', 'Ownership', 'Sanctions', 'History']
 export default function VesselPanel({ vessel, onClose }) {
   const [activeTab, setActiveTab] = useState('Overview')
 
-  if (!vessel) return null
-
   // Computed once per lastSeen change, not on every render.
   // Without useMemo this Date.now() call ran on every 2-second WebSocket
   // position flush that caused the panel to re-render via the selectedVessel
   // sync effect in useVessels.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const timeSinceLastSeen = useMemo(() => {
-    if (!vessel.lastSeen) return 'Unknown'
+    if (!vessel?.lastSeen) return 'Unknown'
     const diff = Date.now() - new Date(vessel.lastSeen).getTime()
     const mins = Math.floor(diff / 60000)
     if (mins < 1) return 'Just now'
@@ -27,7 +24,9 @@ export default function VesselPanel({ vessel, onClose }) {
     const hrs = Math.floor(mins / 60)
     if (hrs < 24) return `${hrs}h ago`
     return `${Math.floor(hrs / 24)}d ago`
-  }, [vessel.lastSeen])
+  }, [vessel?.lastSeen])
+
+  if (!vessel) return null
 
   return (
     <div className="vessel-panel animate-slideRight">
