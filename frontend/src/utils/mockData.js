@@ -134,7 +134,7 @@ export const MOCK_VESSELS = Array.from({ length: 50 }, (_, i) => {
     : randomBetween(8, 18)
 
   return {
-    id: i + 1,
+    id: String(i + 1),
     imo: generateIMO(),
     mmsi: generateMMSI(),
     callSign: generateCallSign(),
@@ -142,6 +142,7 @@ export const MOCK_VESSELS = Array.from({ length: 50 }, (_, i) => {
     type,
     flag,
     riskScore,
+    riskFactors: [],
     position: {
       lat: pos.lat + randomBetween(-0.5, 0.5),
       lon: pos.lon + randomBetween(-0.5, 0.5),
