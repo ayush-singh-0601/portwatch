@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 
 const MAX_PENDING_UPDATES = 1500
 
@@ -43,13 +43,11 @@ export default function useWebSocket(url) {
   const maxReconnectDelay = 30000
   const pendingUpdatesRef = useRef({})
 
-  const wsUrl =
-    url ||
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WS_URL
-      ? (import.meta.env.VITE_WS_URL.endsWith('/ws/vessels')
-          ? import.meta.env.VITE_WS_URL
-          : `${import.meta.env.VITE_WS_URL}/ws/vessels`)
-      : 'ws://localhost:8000/ws/vessels')
+  const wsUrl = useMemo(() => {
+    if (url) return url
+    const base = import.meta.env?.VITE_WS_URL || 'ws://localhost:8000'
+    return base.endsWith('/ws/vessels') ? base : `${base}/ws/vessels`
+  }, [url])
 
   const connect = useCallback(() => {
     try {
