@@ -282,8 +282,8 @@ async def get_enriched_vessels(
                 })
 
         enriched.append({
-            "id": str(vessel.imo),
-            "imo": str(vessel.imo),
+            "id": str(vessel.imo) if vessel.imo is not None else str(vessel.mmsi or ""),
+            "imo": str(vessel.imo) if vessel.imo is not None else None,
             "mmsi": str(vessel.mmsi) if vessel.mmsi else None,
             "callSign": vessel.call_sign,
             "name": vessel.name,
