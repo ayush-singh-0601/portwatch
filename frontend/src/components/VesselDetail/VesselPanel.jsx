@@ -15,11 +15,14 @@ export default function VesselPanel({ vessel, onClose }) {
   const [isScreening, setIsScreening] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [ownershipGraph, setOwnershipGraph] = useState(null)
+  const [ownershipLoading, setOwnershipLoading] = useState(false)
 
   // Fetch ownership graph from API when Ownership tab is selected
   useEffect(() => {
     if (activeTab !== 'Ownership' || !vessel?.imo) return
     let isMounted = true
+    setOwnershipGraph(null)
+    setOwnershipLoading(true)
     getOwnership(vessel.imo)
       .then((data) => {
         if (isMounted && data) {
@@ -29,6 +32,9 @@ export default function VesselPanel({ vessel, onClose }) {
       .catch(() => {
         // Fallback to mock data handled in OwnershipGraph
         if (isMounted) setOwnershipGraph(null)
+      })
+      .finally(() => {
+        if (isMounted) setOwnershipLoading(false)
       })
     return () => {
       isMounted = false
@@ -279,6 +285,11 @@ export default function VesselPanel({ vessel, onClose }) {
               </div>
             )}
 
+            {ownershipLoading && (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--space-lg)', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
+                Loading ownership data…
+              </div>
+            )}
             <OwnershipGraph vessel={vessel} graphData={ownershipGraph} />
           </div>
         )}
