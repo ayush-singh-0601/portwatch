@@ -99,14 +99,18 @@ export default function OwnershipGraph({ vessel, graphData }) {
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
+    let alive = true
     const obs = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect
-      if (width > 0 && height > 0) {
+      if (alive && width > 0 && height > 0) {
         setDimensions({ width, height: Math.max(height, 300) })
       }
     })
     obs.observe(container)
-    return () => obs.disconnect()
+    return () => {
+      alive = false
+      obs.disconnect()
+    }
   }, [])
 
   useEffect(() => {
