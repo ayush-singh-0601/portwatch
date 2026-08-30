@@ -84,7 +84,6 @@ function VesselMarker({ vessel, isSelected, onClick }) {
     [onClick]
   )
 
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
 
   const speed = Number(vessel.speed)
   const heading = Number(vessel.heading)
