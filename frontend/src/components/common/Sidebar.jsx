@@ -77,13 +77,7 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
         <div className="sidebar-presets">
           <button
             className="sidebar-preset-btn"
-            onClick={() =>
-              onFiltersChange({
-                types: ['cargo', 'tanker', 'fishing', 'passenger', 'other'],
-                riskMin: 0,
-                riskMax: 100,
-              })
-            }
+            onClick={handleReset}
           >
             All Vessels
           </button>
