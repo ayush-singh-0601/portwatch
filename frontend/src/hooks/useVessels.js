@@ -175,6 +175,7 @@ export default function useVessels() {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
 
     if (!query || query.trim().length === 0) {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
       setSearchResults([])
       return
     }
