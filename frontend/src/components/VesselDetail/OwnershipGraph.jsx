@@ -119,6 +119,9 @@ export default function OwnershipGraph({ vessel, graphData }) {
     const data = graphData || buildMockGraph(vessel)
     if (!data.nodes || data.nodes.length === 0) return
 
+    // Clear stale fixed positions from any previous drag interactions
+    data.nodes.forEach(d => { d.fx = null; d.fy = null })
+
     const svg = d3.select(svgRef.current)
     svg.selectAll('*').remove()
 
