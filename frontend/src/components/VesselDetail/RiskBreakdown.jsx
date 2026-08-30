@@ -227,7 +227,7 @@ export default function RiskBreakdown({ vessel }) {
             <span>No risk factors detected</span>
           </div>
         ) : (
-          factors
+          [...factors]
             .sort((a, b) => b.points - a.points)
             .map((factor, i) => {
               const meta = FACTOR_META[factor.factor_name] || {
