@@ -61,6 +61,8 @@ export default function VesselPanel({ vessel, onClose }) {
   // Reset operation statuses when switching to a different vessel
   useEffect(() => {
     setActionStatus({ recalc: null, screen: null, export: null })
+    setActiveTab('Overview')
+    setOwnershipGraph(null)
   }, [vessel?.id])
 
   const handleRecalculateRisk = async () => {
