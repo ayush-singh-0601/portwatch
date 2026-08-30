@@ -182,19 +182,27 @@ export default function VesselPanel({ vessel, onClose }) {
               <div className="vessel-panel-grid">
                 <div className="vessel-panel-field">
                   <span className="label">Gross Tonnage</span>
-                  <span className="mono">{vessel.grossTonnage?.toLocaleString()} GT</span>
+                  <span className="mono">
+                    {vessel.grossTonnage != null ? vessel.grossTonnage.toLocaleString() : '—'} GT
+                  </span>
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">Deadweight</span>
-                  <span className="mono">{vessel.deadweight?.toLocaleString()} DWT</span>
+                  <span className="mono">
+                    {vessel.deadweight != null ? vessel.deadweight.toLocaleString() : '—'} DWT
+                  </span>
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">Year Built</span>
-                  <span className="mono">{vessel.yearBuilt}</span>
+                  <span className="mono">{vessel.yearBuilt ?? '—'}</span>
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">Length × Beam</span>
-                  <span className="mono">{vessel.length}m × {vessel.beam}m</span>
+                  <span className="mono">
+                    {vessel.length != null && vessel.beam != null
+                      ? `${vessel.length}m × ${vessel.beam}m`
+                      : '—'}
+                  </span>
                 </div>
               </div>
             </div>
