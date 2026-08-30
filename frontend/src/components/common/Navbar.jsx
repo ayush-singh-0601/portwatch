@@ -79,7 +79,13 @@ export default function Navbar({
           <kbd className="navbar-kbd">{shortcutText}</kbd>
         </button>
 
-        <button className="btn-icon btn-ghost navbar-icon-btn" title="Settings">
+        <button
+          className="btn-icon btn-ghost navbar-icon-btn"
+          title="Settings (coming soon)"
+          aria-disabled="true"
+          aria-label="Settings (coming soon)"
+          style={{ opacity: 0.4, cursor: 'not-allowed' }}
+        >
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <circle cx="9" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
             <path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.4 3.4l1.4 1.4M13.2 13.2l1.4 1.4M3.4 14.6l1.4-1.4M13.2 4.8l1.4-1.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
