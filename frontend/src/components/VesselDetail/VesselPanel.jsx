@@ -56,13 +56,20 @@ export default function VesselPanel({ vessel, onClose }) {
     return `${Math.floor(hrs / 24)}d ago`
   }, [vessel?.lastSeen])
 
+  const [actionStatus, setActionStatus] = useState({ recalc: null, screen: null, export: null })
+
   const handleRecalculateRisk = async () => {
     if (!vessel?.imo || isRecalculating) return
     try {
       setIsRecalculating(true)
+      setActionStatus(s => ({ ...s, recalc: null }))
       await calculateRisk(vessel.imo)
+      setActionStatus(s => ({ ...s, recalc: 'done' }))
+      setTimeout(() => setActionStatus(s => ({ ...s, recalc: null })), 3000)
     } catch (err) {
       console.error('Failed to recalculate risk:', err)
+      setActionStatus(s => ({ ...s, recalc: 'error' }))
+      setTimeout(() => setActionStatus(s => ({ ...s, recalc: null })), 3000)
     } finally {
       setIsRecalculating(false)
     }
@@ -72,9 +79,14 @@ export default function VesselPanel({ vessel, onClose }) {
     if (!vessel?.imo || isScreening) return
     try {
       setIsScreening(true)
+      setActionStatus(s => ({ ...s, screen: null }))
       await screenSanctions(vessel.imo)
+      setActionStatus(s => ({ ...s, screen: 'done' }))
+      setTimeout(() => setActionStatus(s => ({ ...s, screen: null })), 3000)
     } catch (err) {
       console.error('Failed to screen sanctions:', err)
+      setActionStatus(s => ({ ...s, screen: 'error' }))
+      setTimeout(() => setActionStatus(s => ({ ...s, screen: null })), 3000)
     } finally {
       setIsScreening(false)
     }
@@ -84,12 +96,17 @@ export default function VesselPanel({ vessel, onClose }) {
     if (!vessel?.imo || isExporting) return
     try {
       setIsExporting(true)
+      setActionStatus(s => ({ ...s, export: null }))
       const res = await generateReport(vessel.imo, 'pdf')
       if (res?.download_url) {
         window.open(res.download_url, '_blank')
       }
+      setActionStatus(s => ({ ...s, export: 'done' }))
+      setTimeout(() => setActionStatus(s => ({ ...s, export: null })), 3000)
     } catch (err) {
       console.error('Failed to generate report:', err)
+      setActionStatus(s => ({ ...s, export: 'error' }))
+      setTimeout(() => setActionStatus(s => ({ ...s, export: null })), 3000)
     } finally {
       setIsExporting(false)
     }
@@ -395,7 +412,7 @@ export default function VesselPanel({ vessel, onClose }) {
           disabled={isRecalculating}
           title="Recalculate risk score using latest AIS positions and events"
         >
-          {isRecalculating ? 'Scoring...' : 'Recalculate Risk'}
+          {isRecalculating ? 'Scoring…' : actionStatus.recalc === 'done' ? '✓ Updated' : actionStatus.recalc === 'error' ? '✗ Failed' : 'Recalculate Risk'}
         </button>
         <button
           className="vessel-panel-btn"
@@ -403,7 +420,7 @@ export default function VesselPanel({ vessel, onClose }) {
           disabled={isScreening}
           title="Screen vessel and ownership entities against OFAC, EU, UN, and OFSI lists"
         >
-          {isScreening ? 'Screening...' : 'Screen Sanctions'}
+          {isScreening ? 'Screening…' : actionStatus.screen === 'done' ? '✓ Screened' : actionStatus.screen === 'error' ? '✗ Failed' : 'Screen Sanctions'}
         </button>
         <button
           className="vessel-panel-btn vessel-panel-btn-primary"
@@ -411,7 +428,7 @@ export default function VesselPanel({ vessel, onClose }) {
           disabled={isExporting}
           title="Generate and download full PDF intelligence report"
         >
-          {isExporting ? 'Generating...' : 'Export Intel Report'}
+          {isExporting ? 'Generating…' : actionStatus.export === 'done' ? '✓ Downloaded' : actionStatus.export === 'error' ? '✗ Failed' : 'Export Intel Report'}
         </button>
       </div>
     </div>
