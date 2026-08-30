@@ -270,8 +270,8 @@ export default function VesselPanel({ vessel, onClose }) {
                 <div className="vessel-panel-flag-history">
                   {vessel.ownership.flagHistory.map((entry, i) => (
                     <div key={i} className="vessel-panel-flag-entry">
-                      <span className="vessel-panel-flag-emoji">{entry.flag.emoji}</span>
-                      <span>{entry.flag.name}</span>
+                      <span className="vessel-panel-flag-emoji">{entry.flag?.emoji ?? '🏳️'}</span>
+                      <span>{entry.flag?.name ?? 'Unknown'}</span>
                       <span className="mono text-muted">{entry.from} — {entry.to}</span>
                     </div>
                   ))}
