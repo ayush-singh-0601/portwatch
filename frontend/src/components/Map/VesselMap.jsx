@@ -59,6 +59,21 @@ function compareMarkerPriority(a, b) {
   return timeB - timeA
 }
 
+function MapResizeHandler() {
+  const map = useMapEvents({})
+  useEffect(() => {
+    const container = map.getContainer()
+    if (!container) return
+    const obs = new ResizeObserver(() => {
+      map.invalidateSize()
+    })
+    obs.observe(container)
+    return () => obs.disconnect()
+  }, [map])
+
+  return null
+}
+
 function MapViewportTracker({ onViewportChange }) {
   const updateViewport = useCallback(
     (map) => {
@@ -139,6 +154,7 @@ export default function VesselMap({ vessels = [], selectedVessel, onVesselClick 
         maxZoom={19}
       />
 
+      <MapResizeHandler />
       <MapViewportTracker onViewportChange={setViewport} />
       <VesselMarkerLayer
         vessels={vessels}
