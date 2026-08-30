@@ -11,6 +11,7 @@ import './VesselSearch.css'
 export default function VesselSearch({ onSearch, results = [], onSelect, onClose }) {
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
+  const [isSearching, setIsSearching] = useState(false)
   const inputRef = useRef(null)
   const listRef = useRef(null)
 
@@ -22,15 +23,20 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
   // Search immediately (useVessels hook handles debouncing)
   useEffect(() => {
     if (query.length >= 2) {
+      setIsSearching(true)
       onSearch(query)
+      const timer = setTimeout(() => setIsSearching(false), 350)
+      return () => clearTimeout(timer)
     } else {
+      setIsSearching(false)
       onSearch('')
     }
   }, [query, onSearch])
 
-  // Reset active index when results change
+  // Reset active index and clear searching when results change
   useEffect(() => {
     setActiveIndex(0)
+    setIsSearching(false)
   }, [results])
 
   // Keyboard navigation
@@ -123,7 +129,7 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
         )}
 
         {/* Empty state */}
-        {query.length >= 2 && results.length === 0 && (
+        {query.length >= 2 && results.length === 0 && !isSearching && (
           <div className="search-empty">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="40" height="40">
               <path d="M9.172 14.828a4 4 0 005.656 0M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
