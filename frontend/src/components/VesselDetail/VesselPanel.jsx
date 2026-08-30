@@ -161,8 +161,10 @@ export default function VesselPanel({ vessel, onClose }) {
         {TABS.map((tab) => (
           <button
             key={tab}
+            id={`tab-${tab.toLowerCase()}`}
             role="tab"
             aria-selected={activeTab === tab}
+            aria-controls={`tabpanel-${tab.toLowerCase()}`}
             className={`tab-bar-item ${activeTab === tab ? 'active' : ''}`}
             onClick={() => setActiveTab(tab)}
           >
@@ -174,7 +176,12 @@ export default function VesselPanel({ vessel, onClose }) {
       {/* Tab Content */}
       <div className="vessel-panel-content">
         {activeTab === 'Overview' && (
-          <div className="animate-fadeIn">
+          <div
+            className="animate-fadeIn"
+            role="tabpanel"
+            id="tabpanel-overview"
+            aria-labelledby="tab-overview"
+          >
             <IdentityCard vessel={vessel} />
 
             <div className="vessel-panel-section">
@@ -269,7 +276,12 @@ export default function VesselPanel({ vessel, onClose }) {
         )}
 
         {activeTab === 'Ownership' && (
-          <div className="animate-fadeIn">
+          <div
+            className="animate-fadeIn"
+            role="tabpanel"
+            id="tabpanel-ownership"
+            aria-labelledby="tab-ownership"
+          >
             <div className="vessel-panel-section">
               <h4 className="vessel-panel-section-title">Corporate Structure</h4>
               <div className="vessel-panel-ownership-list">
@@ -319,7 +331,12 @@ export default function VesselPanel({ vessel, onClose }) {
         )}
 
         {activeTab === 'Sanctions' && (
-          <div className="animate-fadeIn">
+          <div
+            className="animate-fadeIn"
+            role="tabpanel"
+            id="tabpanel-sanctions"
+            aria-labelledby="tab-sanctions"
+          >
             {vessel.sanctions?.matched ? (
               <div className="vessel-panel-section">
                 <div className="vessel-panel-sanctions-alert">
@@ -365,7 +382,12 @@ export default function VesselPanel({ vessel, onClose }) {
         )}
 
         {activeTab === 'History' && (
-          <div className="animate-fadeIn">
+          <div
+            className="animate-fadeIn"
+            role="tabpanel"
+            id="tabpanel-history"
+            aria-labelledby="tab-history"
+          >
             {vessel.portCalls && vessel.portCalls.length > 0 ? (
               <div className="vessel-panel-section">
                 <h4 className="vessel-panel-section-title">Port Call History</h4>
