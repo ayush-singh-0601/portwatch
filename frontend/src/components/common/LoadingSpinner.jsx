@@ -6,12 +6,13 @@ import './LoadingSpinner.css'
 
 export default function LoadingSpinner({ text = 'Loading...' }) {
   return (
-    <div className="loading-spinner">
+    <div className="loading-spinner" role="status" aria-live="polite">
       <svg
         className="spinner-icon"
         viewBox="0 0 100 100"
         width="48"
         height="48"
+        aria-hidden="true"
       >
         {/* Outer ring */}
         <circle

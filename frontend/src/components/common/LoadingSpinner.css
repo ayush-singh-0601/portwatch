@@ -13,11 +13,14 @@
 
 .spinner-icon {
   animation: spinSlow 3s linear infinite;
+  transform-origin: 50px 50px;
+  transform-box: fill-box;
 }
 
 .spinner-arc {
   animation: spinArc 1.5s ease-in-out infinite;
-  transform-origin: center;
+  transform-origin: 50px 50px;
+  transform-box: fill-box;
 }
 
 .spinner-north {
