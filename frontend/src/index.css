@@ -31,6 +31,11 @@
   --success-glow:  hsla(160, 60%, 45%, 0.3);
   --info:          hsl(240, 70%, 65%);
 
+  /* Primary interactive color — indigo, used for primary action buttons */
+  --primary:       hsl(244, 76%, 62%);
+  --primary-hover: hsl(244, 76%, 68%);
+  --primary-glow:  hsla(244, 76%, 62%, 0.3);
+
   /* Text */
   --text-primary:   hsl(220, 15%, 85%);
   --text-secondary: hsl(220, 12%, 55%);
