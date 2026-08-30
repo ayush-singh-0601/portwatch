@@ -152,11 +152,15 @@ export default function VesselPanel({ vessel, onClose }) {
               <div className="vessel-panel-grid">
                 <div className="vessel-panel-field">
                   <span className="label">Latitude</span>
-                  <span className="mono">{vessel.position?.lat?.toFixed(4)}°</span>
+                  <span className="mono">
+                    {vessel.position?.lat != null ? vessel.position.lat.toFixed(4) : '—'}°
+                  </span>
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">Longitude</span>
-                  <span className="mono">{vessel.position?.lon?.toFixed(4)}°</span>
+                  <span className="mono">
+                    {vessel.position?.lon != null ? vessel.position.lon.toFixed(4) : '—'}°
+                  </span>
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">Speed</span>
