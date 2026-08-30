@@ -123,7 +123,7 @@ async def get_sanctions(
         ],
         total_matches=len(matches),
         highest_score=highest,
-        is_sanctioned=highest is not None and highest >= 90.0,
+        is_sanctioned=highest is not None and highest >= 85.0,
     )
 
 
