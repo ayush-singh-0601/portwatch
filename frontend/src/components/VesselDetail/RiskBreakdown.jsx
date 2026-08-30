@@ -109,6 +109,9 @@ function getRiskLevelLabel(score) {
   return 'CRITICAL'
 }
 
+const RING_RADIUS = 34
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
+
 export default function RiskBreakdown({ vessel }) {
   const score = vessel?.riskScore ?? 0
   const levelColor = getRiskLevelColor(score)
@@ -173,6 +176,8 @@ export default function RiskBreakdown({ vessel }) {
     return mockFactors
   }, [vessel, score])
 
+  const strokeDashoffset = RING_CIRCUMFERENCE - (score / 100) * RING_CIRCUMFERENCE
+
   return (
     <div className="risk-breakdown">
       {/* Score header */}
@@ -185,20 +190,21 @@ export default function RiskBreakdown({ vessel }) {
             aria-label={`Risk score ${score} out of 100 — ${levelLabel}`}
           >
             <circle
-              cx="40" cy="40" r="34"
+              cx="40" cy="40" r={RING_RADIUS}
               fill="none"
               stroke="rgba(255,255,255,0.06)"
               strokeWidth="5"
             />
             <circle
-              cx="40" cy="40" r="34"
+              cx="40" cy="40" r={RING_RADIUS}
               fill="none"
               stroke={levelColor}
               strokeWidth="5"
               strokeLinecap="round"
-              strokeDasharray={`${(score / 100) * 213.6} 213.6`}
+              strokeDasharray={RING_CIRCUMFERENCE}
+              strokeDashoffset={strokeDashoffset}
               transform="rotate(-90 40 40)"
-              style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
+              style={{ transition: 'stroke-dashoffset 0.8s ease-out' }}
             />
           </svg>
           <div className="risk-breakdown-score-value">
