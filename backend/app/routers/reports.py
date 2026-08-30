@@ -99,7 +99,10 @@ async def download_report(report_id: str) -> FileResponse:
     Raises:
         HTTPException 404: If the report does not exist.
     """
-    if not report_id or ".." in report_id or "/" in report_id or "\\" in report_id:
+    import os
+
+    safe_id = os.path.basename(report_id or "")
+    if not report_id or safe_id != report_id or ".." in report_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid report ID format",
