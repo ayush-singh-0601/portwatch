@@ -89,8 +89,10 @@ export async function screenSanctions(imo) {
 }
 
 /** Generate investigation report */
-export async function generateReport(imo, format = 'pdf') {
-  return api.post(`/vessels/${imo}/report`, { format })
+export async function generateReport(imo, format = 'pdf', sections = null) {
+  const body = { format }
+  if (sections) body.sections = sections
+  return api.post(`/vessels/${imo}/report`, body)
 }
 
 export default api
