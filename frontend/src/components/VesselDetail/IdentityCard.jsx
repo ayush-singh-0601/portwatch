@@ -16,21 +16,21 @@ export default function IdentityCard({ vessel }) {
       <div className="identity-card-grid">
         <div className="identity-card-item">
           <span className="label">IMO Number</span>
-          <span className="mono identity-card-value">{vessel.imo}</span>
+          <span className="mono identity-card-value">{vessel.imo || '—'}</span>
         </div>
         <div className="identity-card-item">
           <span className="label">MMSI</span>
-          <span className="mono identity-card-value">{vessel.mmsi}</span>
+          <span className="mono identity-card-value">{vessel.mmsi || '—'}</span>
         </div>
         <div className="identity-card-item">
           <span className="label">Call Sign</span>
-          <span className="mono identity-card-value">{vessel.callSign}</span>
+          <span className="mono identity-card-value">{vessel.callSign || '—'}</span>
         </div>
         <div className="identity-card-item">
           <span className="label">Flag State</span>
           <span className="identity-card-value identity-card-flag">
-            <span style={{ fontSize: '1.1rem' }}>{vessel.flag?.emoji}</span>
-            {vessel.flag?.name}
+            <span style={{ fontSize: '1.1rem' }}>{vessel.flag?.emoji ?? '🏳️'}</span>
+            {vessel.flag?.name ?? 'Unknown'}
           </span>
         </div>
         <div className="identity-card-item identity-card-item-full">

@@ -144,9 +144,9 @@ export default function VesselPanel({ vessel, onClose }) {
         </div>
 
         <div className="vessel-panel-ids">
-          <span className="mono">{vessel.imo}</span>
+          <span className="mono">{vessel.imo ?? 'No IMO'}</span>
           <span className="vessel-panel-id-sep">•</span>
-          <span className="mono">MMSI {vessel.mmsi}</span>
+          <span className="mono">{vessel.mmsi ? `MMSI ${vessel.mmsi}` : 'No MMSI'}</span>
         </div>
 
         <span className={`badge ${getVesselBadgeClass(vessel.type)}`}>
