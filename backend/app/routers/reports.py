@@ -133,4 +133,5 @@ async def download_report(report_id: str) -> FileResponse:
         path=str(filepath),
         media_type=media_type,
         filename=filepath.name,
+        headers={"Content-Disposition": f'attachment; filename="{filepath.name}"'},
     )
