@@ -64,11 +64,21 @@ function MapResizeHandler() {
   useEffect(() => {
     const container = map.getContainer()
     if (!container) return
+    let active = true
     const obs = new ResizeObserver(() => {
-      map.invalidateSize()
+      if (active && map && map.getContainer()) {
+        try {
+          map.invalidateSize()
+        } catch {
+          // Ignore errors during container destruction
+        }
+      }
     })
     obs.observe(container)
-    return () => obs.disconnect()
+    return () => {
+      active = false
+      obs.disconnect()
+    }
   }, [map])
 
   return null
