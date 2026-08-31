@@ -72,6 +72,55 @@ function buildMockGraph(vessel) {
   return { nodes, links }
 }
 
+function normalizeGraphData(vessel, graphData) {
+  if (!graphData) return buildMockGraph(vessel)
+
+  // If already in D3 format ({ nodes: [...], links: [...] })
+  if (Array.isArray(graphData.nodes) && Array.isArray(graphData.links)) {
+    return graphData
+  }
+
+  // If backend API format ({ vessel_imo, nodes: [...], edges: [...] })
+  if (Array.isArray(graphData.nodes) && Array.isArray(graphData.edges)) {
+    const vesselId = `vessel_${vessel.imo || vessel.id}`
+    const centerNode = {
+      id: vesselId,
+      label: vessel.name,
+      type: 'vessel',
+      isCenter: true,
+      flag: vessel.flag?.code,
+    }
+
+    const entityNodes = graphData.nodes.map(n => ({
+      id: `entity_${n.id}`,
+      label: n.name || `Entity ${n.id}`,
+      type: n.entity_type || 'company',
+      country: n.country,
+    }))
+
+    const nodes = [centerNode, ...entityNodes]
+
+    const links = graphData.edges.map(e => ({
+      source: `entity_${e.source_entity_id}`,
+      target: e.vessel_imo ? vesselId : `entity_${e.target_entity_id}`,
+      relationship: e.relationship_type || 'owner',
+    }))
+
+    // If no links connected to vessel directly and we have entity nodes, link the first
+    if (entityNodes.length > 0 && !links.some(l => l.target === vesselId || l.source === vesselId)) {
+      links.push({
+        source: entityNodes[0].id,
+        target: vesselId,
+        relationship: 'owner',
+      })
+    }
+
+    return { nodes, links }
+  }
+
+  return buildMockGraph(vessel)
+}
+
 const NODE_COLORS = {
   vessel: 'var(--accent)',
   company: 'hsl(220, 50%, 55%)',
@@ -116,7 +165,7 @@ export default function OwnershipGraph({ vessel, graphData }) {
   useEffect(() => {
     if (!vessel) return
 
-    const data = graphData || buildMockGraph(vessel)
+    const data = normalizeGraphData(vessel, graphData)
     if (!data.nodes || data.nodes.length === 0) return
 
     // Clear stale fixed positions from any previous drag interactions
