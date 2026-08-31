@@ -339,12 +339,17 @@
 
 /* ── Vessel Panel Action Buttons ─────────────────────────── */
 .vessel-panel-actions {
+  position: sticky;
+  bottom: 0;
   display: flex;
   gap: var(--space-xs);
   padding: var(--space-sm) var(--space-lg);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--border);
   margin-top: auto;
+  z-index: 10;
 }
 
 .vessel-panel-btn {
