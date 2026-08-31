@@ -44,13 +44,14 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
     (e) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
-        setActiveIndex((prev) => Math.min(prev + 1, results.length - 1))
+        setActiveIndex((prev) => Math.min(prev + 1, Math.max(0, results.length - 1)))
       } else if (e.key === 'ArrowUp') {
         e.preventDefault()
         setActiveIndex((prev) => Math.max(prev - 1, 0))
       } else if (e.key === 'Enter' && results.length > 0) {
         e.preventDefault()
-        onSelect(results[activeIndex] || results[0])
+        const selected = results[Math.min(activeIndex, results.length - 1)] || results[0]
+        if (selected) onSelect(selected)
       } else if (e.key === 'Escape') {
         onClose()
       }
@@ -65,20 +66,25 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
   }, [activeIndex])
 
   return (
-    <div className="search-overlay" onClick={onClose}>
+    <div className="search-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Search vessels">
       <div
         className="search-modal glass-panel"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
         <div className="search-input-wrapper">
-          <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.35-4.35" />
           </svg>
           <input
             ref={inputRef}
             type="text"
+            role="combobox"
+            aria-expanded={results.length > 0}
+            aria-controls="search-results-list"
+            aria-autocomplete="list"
+            aria-activedescendant={results.length > 0 ? `search-result-${activeIndex}` : undefined}
             className="search-input"
             placeholder="Search vessels by name, IMO, or MMSI..."
             value={query}
@@ -90,10 +96,11 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
 
         {/* Results */}
         {results.length > 0 && (
-          <ul className="search-results" ref={listRef} role="listbox" aria-label="Vessel search results">
+          <ul id="search-results-list" className="search-results" ref={listRef} role="listbox" aria-label="Vessel search results">
             {results.map((vessel, i) => (
               <li
                 key={vessel.id}
+                id={`search-result-${i}`}
                 role="option"
                 aria-selected={i === activeIndex}
                 className={`search-result-item ${i === activeIndex ? 'active' : ''}`}
