@@ -23,8 +23,28 @@ from pyais.messages import NMEAMessage
 
 logger = logging.getLogger(__name__)
 
-# Multi-part message buffer keyed by (talker + frag_count + seq_number)
-_fragment_buffer: dict[str, list[NMEAMessage]] = {}
+import time
+
+# Multi-part message buffer keyed by buffer_key -> (timestamp, [fragments])
+_fragment_buffer: dict[str, tuple[float, list[NMEAMessage]]] = {}
+_MAX_BUFFER_SIZE = 1000
+_FRAGMENT_TTL_SECS = 60.0
+
+
+def _prune_fragment_buffer(now: float) -> None:
+    """Prune expired fragments and enforce max buffer size."""
+    expired_keys = [
+        k for k, (ts, _) in _fragment_buffer.items()
+        if now - ts > _FRAGMENT_TTL_SECS
+    ]
+    for k in expired_keys:
+        _fragment_buffer.pop(k, None)
+
+    # If still over capacity, evict oldest entries
+    if len(_fragment_buffer) > _MAX_BUFFER_SIZE:
+        sorted_keys = sorted(_fragment_buffer.keys(), key=lambda k: _fragment_buffer[k][0])
+        for k in sorted_keys[: len(_fragment_buffer) - _MAX_BUFFER_SIZE]:
+            _fragment_buffer.pop(k, None)
 
 
 @dataclass
@@ -86,20 +106,22 @@ def decode_nmea(raw: str) -> dict[str, Any]:
             logger.warning("Failed to decode single-part NMEA: %s", raw[:80])
             return {}
 
-    # Multi-part message — buffer fragments
+    # Multi-part message — buffer fragments with timestamp
+    now = time.time()
+    _prune_fragment_buffer(now)
     buffer_key = f"{nmea.frag_cnt}_{nmea.seq_id}"
 
     if nmea.frag_num == 1:
-        _fragment_buffer[buffer_key] = [nmea]
+        _fragment_buffer[buffer_key] = (now, [nmea])
     else:
         if buffer_key not in _fragment_buffer:
             logger.debug("Received fragment %d without fragment 1, discarding", nmea.frag_num)
             return {}
-        _fragment_buffer[buffer_key].append(nmea)
+        _fragment_buffer[buffer_key][1].append(nmea)
 
     # Check if all fragments have arrived
-    if len(_fragment_buffer[buffer_key]) == nmea.frag_cnt:
-        fragments = _fragment_buffer.pop(buffer_key)
+    if len(_fragment_buffer[buffer_key][1]) == nmea.frag_cnt:
+        _, fragments = _fragment_buffer.pop(buffer_key)
         try:
             decoded = fragments[0].decode(*fragments[1:])
             return decoded.asdict()
