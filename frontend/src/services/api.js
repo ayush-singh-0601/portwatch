@@ -41,6 +41,13 @@ api.interceptors.response.use(
   }
 )
 
+// ── Helper ────────────────────────────────────────────────────
+function cleanImo(imo) {
+  if (!imo) return imo
+  const digits = String(imo).replace(/\D/g, '')
+  return digits || imo
+}
+
 // ── API Functions ──────────────────────────────────────────────
 
 /** Fetch all vessels with optional query params */
@@ -50,7 +57,7 @@ export async function getVessels(params = {}) {
 
 /** Fetch a single vessel by IMO */
 export async function getVessel(imo) {
-  return api.get(`/vessels/${imo}`)
+  return api.get(`/vessels/${cleanImo(imo)}`)
 }
 
 /** Search vessels by name */
@@ -60,39 +67,39 @@ export async function searchVessels(query) {
 
 /** Fetch AIS positions for a vessel */
 export async function getPositions(imo, params = {}) {
-  return api.get(`/vessels/${imo}/positions`, { params })
+  return api.get(`/vessels/${cleanImo(imo)}/positions`, { params })
 }
 
 /** Fetch ownership graph for a vessel */
 export async function getOwnership(imo) {
-  return api.get(`/vessels/${imo}/ownership`)
+  return api.get(`/vessels/${cleanImo(imo)}/ownership`)
 }
 
 /** Fetch sanctions screening results */
 export async function getSanctions(imo) {
-  return api.get(`/vessels/${imo}/sanctions`)
+  return api.get(`/vessels/${cleanImo(imo)}/sanctions`)
 }
 
 /** Fetch risk score breakdown */
 export async function getRiskScore(imo) {
-  return api.get(`/vessels/${imo}/risk`)
+  return api.get(`/vessels/${cleanImo(imo)}/risk`)
 }
 
 /** Recalculate risk score breakdown */
 export async function calculateRisk(imo) {
-  return api.post(`/vessels/${imo}/risk/calculate`)
+  return api.post(`/vessels/${cleanImo(imo)}/risk/calculate`)
 }
 
 /** Screen vessel against sanctions lists */
 export async function screenSanctions(imo) {
-  return api.post(`/vessels/${imo}/screen`)
+  return api.post(`/vessels/${cleanImo(imo)}/screen`)
 }
 
 /** Generate investigation report */
 export async function generateReport(imo, format = 'pdf', sections = null) {
   const body = { format }
   if (sections) body.sections = sections
-  return api.post(`/vessels/${imo}/report`, body)
+  return api.post(`/vessels/${cleanImo(imo)}/report`, body)
 }
 
 export default api
