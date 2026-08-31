@@ -237,11 +237,19 @@ def parse_ofsi_sanctions(xml_path: Path) -> list[dict]:
                 entity_type = "individual"
 
             # Collect all name parts
+            name_parts = []
             for name_elem in elem.iter():
                 name_tag = re.sub(r"\{.*\}", "", name_elem.tag)
-                if name_tag in ("Name6", "name6", "FullName", "Name1"):
-                    if name_elem.text:
-                        names.append(_normalize(name_elem.text))
+                if name_tag.lower() in ("fullname", "entityname", "name6", "name1", "name2", "name3", "name4", "name5"):
+                    if name_elem.text and name_elem.text.strip():
+                        name_parts.append(_normalize(name_elem.text))
+
+            full_combined = " ".join([p for p in name_parts if p]).strip()
+            if full_combined:
+                names.append(full_combined)
+            for p in name_parts:
+                if p and p not in names:
+                    names.append(p)
 
             # Regime
             regime = _find_text(elem, "RegimeName")
