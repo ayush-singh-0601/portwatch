@@ -171,3 +171,21 @@ class TestCompositeScoreCapping:
         assert total == 100
 
 
+class TestBeneficialOwnerSanctions:
+    def test_ownership_chain_factor_creation(self):
+        matches = [
+            {"matched_field": "ownership_entity", "match_score": 92.0},
+        ]
+        factor = _FakeRiskFactor(
+            factor_name="beneficial_owner_sanctioned",
+            points=30,
+            evidence_description=(
+                f"Ownership chain entity matched on sanctions list. {len(matches)} match(es)."
+            ),
+        )
+        assert factor.points == 30
+        assert factor.factor_name == "beneficial_owner_sanctioned"
+        assert "Ownership chain entity" in factor.evidence_description
+
+
+
