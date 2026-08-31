@@ -68,6 +68,12 @@ const FACTOR_META = {
     maxPoints: 5,
     color: 'var(--text-secondary)',
   },
+  loitering_near_risk_zone: {
+    label: 'Loitering in Risk Zone',
+    icon: '📍',
+    maxPoints: 5,
+    color: 'hsl(25, 80%, 55%)',
+  },
   loitering: {
     label: 'Loitering',
     icon: '📍',
