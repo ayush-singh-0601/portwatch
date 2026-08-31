@@ -76,3 +76,20 @@ class TestSanctionsScreeningAgent:
         assert agent._sanctions_cache is not None
         agent.invalidate_cache()
         assert agent._sanctions_cache is None
+
+    async def test_make_match_with_entity_id(self):
+        db = AsyncMock()
+        agent = SanctionsScreeningAgent(db)
+        entry = _FakeSanctionsEntry(2, "NATIONAL IRANIAN TANKER CO", "OFAC")
+        match = agent._make_match(
+            entry=entry,
+            score=95.0,
+            match_type="fuzzy",
+            matched_field="ownership_entity",
+            matched_name="National Iranian Tanker Corp",
+            entity_id=42,
+        )
+        assert match["matched_entity_id"] == 42
+        assert match["matched_field"] == "ownership_entity"
+        assert match["match_type"] == "fuzzy"
+
