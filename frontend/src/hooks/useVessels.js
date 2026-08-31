@@ -182,12 +182,20 @@ export default function useVessels() {
 
     searchTimerRef.current = setTimeout(() => {
       const q = query.toLowerCase().trim()
+      const cleanDigits = q.replace(/\D/g, '')
+      const tokens = q.split(/\s+/).filter(Boolean)
       const results = []
       const currentVessels = vesselsRef.current || []
 
       for (const vessel of currentVessels) {
         const text = `${vessel.name || ''} ${vessel.imo || ''} ${vessel.mmsi || ''} ${vessel.type || ''} ${vessel.flag?.name || ''} ${vessel.destination || ''}`.toLowerCase()
-        if (text.includes(q)) {
+        const imoClean = String(vessel.imo || '').replace(/\D/g, '')
+        const mmsiClean = String(vessel.mmsi || '').replace(/\D/g, '')
+
+        const matchesTokens = tokens.length > 0 && tokens.every(token => text.includes(token))
+        const matchesDigits = cleanDigits.length >= 3 && (imoClean.includes(cleanDigits) || mmsiClean.includes(cleanDigits))
+
+        if (matchesTokens || matchesDigits) {
           results.push(vessel)
           if (results.length >= MAX_SEARCH_RESULTS) break
         }
