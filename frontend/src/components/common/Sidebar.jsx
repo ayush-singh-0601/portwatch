@@ -26,7 +26,9 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
 
   const handleRiskMinChange = useCallback(
     (e) => {
-      const val = Math.min(Number(e.target.value), filters.riskMax)
+      const raw = parseInt(e.target.value, 10)
+      const num = isNaN(raw) ? 0 : Math.max(0, Math.min(100, raw))
+      const val = Math.min(num, filters.riskMax)
       onFiltersChange({ ...filters, riskMin: val })
     },
     [filters, onFiltersChange]
@@ -34,7 +36,9 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
 
   const handleRiskMaxChange = useCallback(
     (e) => {
-      const val = Math.max(Number(e.target.value), filters.riskMin)
+      const raw = parseInt(e.target.value, 10)
+      const num = isNaN(raw) ? 100 : Math.max(0, Math.min(100, raw))
+      const val = Math.max(num, filters.riskMin)
       onFiltersChange({ ...filters, riskMax: val })
     },
     [filters, onFiltersChange]
