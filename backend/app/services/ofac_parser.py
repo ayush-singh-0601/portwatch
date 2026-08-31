@@ -135,8 +135,8 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
                 elif tag == "programList":
                     programs = [
                         normalize_text(p.text)
-                        for p in elem.findall("program")
-                        if p.text
+                        for p in elem
+                        if _strip_ns(p.tag) == "program" and p.text
                     ]
                     if not programs:
                         programs = [
@@ -144,7 +144,7 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
                             for p in elem
                             if p.text
                         ]
-                    current_entity.program = "; ".join(programs)
+                    current_entity.program = "; ".join([p for p in programs if p])
 
                 # Aliases
                 elif tag == "aka" or tag == "akaName":
