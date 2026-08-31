@@ -89,3 +89,20 @@ def is_within_nm(
         True if the haversine distance is <= radius_nm nautical miles.
     """
     return haversine_distance(lat1, lon1, lat2, lon2) <= nm_to_km(radius_nm)
+
+
+def is_in_bbox(lat: float, lon: float, bbox: list[float] | tuple[float, float, float, float]) -> bool:
+    """Check if coordinates fall inside a bounding box [min_lon, min_lat, max_lon, max_lat].
+
+    Handles antimeridian (180th meridian) crossing when min_lon > max_lon.
+    """
+    if len(bbox) != 4 or lat is None or lon is None:
+        return False
+    min_lon, min_lat, max_lon, max_lat = bbox
+    in_lat = min_lat <= lat <= max_lat
+    if min_lon <= max_lon:
+        in_lon = min_lon <= lon <= max_lon
+    else:
+        in_lon = lon >= min_lon or lon <= max_lon
+    return in_lat and in_lon
+

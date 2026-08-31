@@ -11,6 +11,7 @@ from app.utils.geo import (
     NM_TO_KM,
     SHIP_BREAKING_YARDS,
     haversine_distance,
+    is_in_bbox,
     is_within_nm,
     nm_to_km,
 )
@@ -127,3 +128,27 @@ class TestShipBreakingYards:
         """Gulf of Guinea open ocean (0, 0) should not be within 30 nm of any yard."""
         for _name, yard_lat, yard_lon in SHIP_BREAKING_YARDS:
             assert not is_within_nm(0.0, 0.0, yard_lat, yard_lon, 30.0)
+
+
+# ---------------------------------------------------------------------------
+# is_in_bbox
+# ---------------------------------------------------------------------------
+
+class TestIsInBbox:
+    def test_point_inside_standard_bbox(self):
+        bbox = [-10.0, 40.0, 10.0, 60.0]
+        assert is_in_bbox(50.0, 0.0, bbox) is True
+
+    def test_point_outside_standard_bbox(self):
+        bbox = [-10.0, 40.0, 10.0, 60.0]
+        assert is_in_bbox(70.0, 0.0, bbox) is False
+        assert is_in_bbox(50.0, 20.0, bbox) is False
+
+    def test_antimeridian_crossing_bbox(self):
+        # Bbox spanning from 170 E to -170 W across 180th meridian
+        bbox = [170.0, -20.0, -170.0, 20.0]
+        assert is_in_bbox(0.0, 175.0, bbox) is True
+        assert is_in_bbox(0.0, -175.0, bbox) is True
+        assert is_in_bbox(0.0, 160.0, bbox) is False
+        assert is_in_bbox(0.0, -160.0, bbox) is False
+
