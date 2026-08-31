@@ -159,11 +159,12 @@ class IdentityResolutionAgent:
                         })
 
         # Flag changes (from vessel history)
-        if vessel.year_built and (datetime.now().year - vessel.year_built) > 20:
+        current_year = datetime.now(timezone.utc).year
+        if vessel.year_built and (current_year - vessel.year_built) > 20:
             anomalies.append({
                 "type": "aged_vessel",
                 "severity": "low",
-                "description": f"Vessel is {datetime.now().year - vessel.year_built} years old",
+                "description": f"Vessel is {current_year - vessel.year_built} years old",
             })
 
         return anomalies
