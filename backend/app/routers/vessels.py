@@ -39,16 +39,16 @@ async def list_vessels(
     query = select(Vessel)
 
     # Apply filters
-    if name is not None:
-        query = query.where(Vessel.name.ilike(f"%{name}%"))
+    if name is not None and name.strip():
+        query = query.where(Vessel.name.ilike(f"%{name.strip()}%"))
     if imo is not None:
         query = query.where(Vessel.imo == imo)
     if mmsi is not None:
         query = query.where(Vessel.mmsi == mmsi)
-    if vessel_type is not None:
-        query = query.where(Vessel.vessel_type.ilike(f"%{vessel_type}%"))
-    if flag is not None:
-        query = query.where(Vessel.flag == flag.upper())
+    if vessel_type is not None and vessel_type.strip():
+        query = query.where(Vessel.vessel_type.ilike(f"%{vessel_type.strip()}%"))
+    if flag is not None and flag.strip():
+        query = query.where(Vessel.flag == flag.strip().upper())
 
     # Count total matches
     count_query = select(func.count()).select_from(query.subquery())
