@@ -119,7 +119,14 @@ export default function VesselPanel({ vessel, onClose }) {
       setActionStatus(s => ({ ...s, export: null }))
       const res = await generateReport(vessel.imo, 'pdf')
       if (res?.download_url) {
-        window.open(res.download_url, '_blank')
+        const a = document.createElement('a')
+        a.href = res.download_url
+        a.download = `portwatch_report_${vessel.imo}.pdf`
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
       }
       setActionStatus(s => ({ ...s, export: 'done' }))
       setTimeout(() => setActionStatus(s => ({ ...s, export: null })), 3000)
