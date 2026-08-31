@@ -177,7 +177,12 @@ class AISStreamClient:
         """Establish connection, send subscription, and listen for messages."""
         logger.info("Connecting to aisstream.io...")
 
-        async with websockets.connect(AISSTREAM_WS_URL) as ws:
+        async with websockets.connect(
+            AISSTREAM_WS_URL,
+            ping_interval=20,
+            ping_timeout=20,
+            close_timeout=10,
+        ) as ws:
             self._ws = ws
             logger.info("Connected to aisstream.io")
 
