@@ -45,8 +45,16 @@ export default function useWebSocket(url) {
 
   const wsUrl = useMemo(() => {
     if (url) return url
-    const base = import.meta.env?.VITE_WS_URL || 'ws://localhost:8000'
-    return base.endsWith('/ws/vessels') ? base : `${base}/ws/vessels`
+    if (import.meta.env?.VITE_WS_URL) {
+      const base = import.meta.env.VITE_WS_URL
+      return base.endsWith('/ws/vessels') ? base : `${base}/ws/vessels`
+    }
+    const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
+    const protocol = isHttps ? 'wss:' : 'ws:'
+    const host = typeof window !== 'undefined'
+      ? (window.location.port === '5173' ? `${window.location.hostname}:8000` : window.location.host)
+      : 'localhost:8000'
+    return `${protocol}//${host}/ws/vessels`
   }, [url])
 
   const connect = useCallback(() => {
