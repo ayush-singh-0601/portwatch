@@ -97,7 +97,7 @@ function randomBetween(min, max) {
 }
 
 function generateIMO() {
-  return `IMO${Math.floor(1000000 + Math.random() * 8999999)}`
+  return `${Math.floor(1000000 + Math.random() * 8999999)}`
 }
 
 function generateMMSI() {
