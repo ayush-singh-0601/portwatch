@@ -10,7 +10,7 @@ Routes::
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -89,9 +89,16 @@ async def get_current_positions(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="bbox must be 4 comma-separated floats: min_lon,min_lat,max_lon,max_lat",
             )
+        if min_lon <= max_lon:
+            lon_filter = VesselPosition.longitude.between(min_lon, max_lon)
+        else:
+            lon_filter = or_(
+                VesselPosition.longitude >= min_lon,
+                VesselPosition.longitude <= max_lon,
+            )
         current_positions_query = current_positions_query.where(
             VesselPosition.latitude.between(min_lat, max_lat),
-            VesselPosition.longitude.between(min_lon, max_lon),
+            lon_filter,
         )
 
     # If filtering by vessel type, join with vessels table
