@@ -200,33 +200,35 @@ class AISAnomalyDetector:
                 current_loitering.append(pos)
             else:
                 if start_pos is not None and len(current_loitering) > 1:
-                    duration = (pos.time - start_pos.time).total_seconds() / 3600.0
-                    if duration >= 4.0:
-                        # Check if near a sanctioned port or ship breaking yard
-                        is_near_risk = await self._is_near_risk_zone(
-                            start_pos.latitude, start_pos.longitude
-                        )
-                        if is_near_risk:
-                            loitering_events.append({
-                                "vessel_imo": vessel_imo,
-                                "start_time": start_pos.time,
-                                "end_time": pos.time,
-                                "duration_hours": duration,
-                                "latitude": start_pos.latitude,
-                                "longitude": start_pos.longitude,
-                                "type": "loitering_near_risk_zone"
-                            })
+                    if pos.time and start_pos.time:
+                        duration = (pos.time - start_pos.time).total_seconds() / 3600.0
+                        if duration >= 4.0:
+                            # Check if near a sanctioned port or ship breaking yard
+                            is_near_risk = await self._is_near_risk_zone(
+                                start_pos.latitude, start_pos.longitude
+                            )
+                            if is_near_risk:
+                                loitering_events.append({
+                                    "vessel_imo": vessel_imo,
+                                    "start_time": start_pos.time,
+                                    "end_time": pos.time,
+                                    "duration_hours": duration,
+                                    "latitude": start_pos.latitude,
+                                    "longitude": start_pos.longitude,
+                                    "type": "loitering_near_risk_zone"
+                                })
                 start_pos = None
                 current_loitering = []
 
         # Handle ongoing loitering
         if start_pos is not None and len(current_loitering) > 1:
             last_pos = current_loitering[-1]
-            duration = (last_pos.time - start_pos.time).total_seconds() / 3600.0
-            if duration >= 4.0:
-                is_near_risk = await self._is_near_risk_zone(
-                    start_pos.latitude, start_pos.longitude
-                )
+            if last_pos.time and start_pos.time:
+                duration = (last_pos.time - start_pos.time).total_seconds() / 3600.0
+                if duration >= 4.0:
+                    is_near_risk = await self._is_near_risk_zone(
+                        start_pos.latitude, start_pos.longitude
+                    )
                 if is_near_risk:
                     loitering_events.append({
                         "vessel_imo": vessel_imo,
