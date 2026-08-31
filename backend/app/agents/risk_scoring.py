@@ -26,7 +26,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.dark_event import DarkEvent
@@ -179,7 +179,13 @@ class RiskScoringAgent:
         owner_result = await self.db.execute(
             select(SanctionsMatch)
             .where(SanctionsMatch.vessel_imo == vessel_imo)
-            .where(SanctionsMatch.match_type == "ownership_chain")
+            .where(
+                or_(
+                    SanctionsMatch.match_type == "ownership_chain",
+                    SanctionsMatch.matched_field == "ownership_entity",
+                    SanctionsMatch.matched_entity_id.is_not(None),
+                )
+            )
         )
         owner_matches = list(owner_result.scalars().all())
         if owner_matches:
