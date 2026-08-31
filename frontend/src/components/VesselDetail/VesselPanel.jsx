@@ -42,12 +42,12 @@ export default function VesselPanel({ vessel, onClose }) {
   }, [activeTab, vessel?.imo])
 
   // Computed once per lastSeen change, not on every render.
-  // Without useMemo this Date.now() call ran on every 2-second WebSocket
-  // position flush that caused the panel to re-render via the selectedVessel
-  // sync effect in useVessels.
   const timeSinceLastSeen = useMemo(() => {
     if (!vessel?.lastSeen) return 'Unknown'
-    const diff = Date.now() - new Date(vessel.lastSeen).getTime()
+    const timestamp = Date.parse(vessel.lastSeen)
+    if (isNaN(timestamp)) return 'Unknown'
+    const diff = Date.now() - timestamp
+    if (diff < 0) return 'Just now'
     const mins = Math.floor(diff / 60000)
     if (mins < 1) return 'Just now'
     if (mins < 60) return `${mins}m ago`
@@ -55,6 +55,19 @@ export default function VesselPanel({ vessel, onClose }) {
     if (hrs < 24) return `${hrs}h ago`
     return `${Math.floor(hrs / 24)}d ago`
   }, [vessel?.lastSeen])
+
+  const formattedEta = useMemo(() => {
+    if (!vessel?.eta) return '—'
+    const timestamp = Date.parse(vessel.eta)
+    if (isNaN(timestamp)) return '—'
+    try {
+      return new Date(timestamp).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+      })
+    } catch {
+      return '—'
+    }
+  }, [vessel?.eta])
 
   const [actionStatus, setActionStatus] = useState({ recalc: null, screen: null, export: null })
 
@@ -253,13 +266,7 @@ export default function VesselPanel({ vessel, onClose }) {
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">ETA</span>
-                  <span className="mono">
-                    {vessel.eta
-                      ? new Date(vessel.eta).toLocaleString('en-US', {
-                          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                        })
-                      : '—'}
-                  </span>
+                  <span className="mono">{formattedEta}</span>
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">Last Seen</span>
