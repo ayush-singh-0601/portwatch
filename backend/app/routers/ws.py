@@ -86,7 +86,12 @@ class ConnectionManager:
             return True
 
         min_lon, min_lat, max_lon, max_lat = bbox
-        return min_lat <= lat <= max_lat and min_lon <= lon <= max_lon
+        in_lat = min_lat <= lat <= max_lat
+        if min_lon <= max_lon:
+            in_lon = min_lon <= lon <= max_lon
+        else:
+            in_lon = lon >= min_lon or lon <= max_lon
+        return in_lat and in_lon
 
     def _filter_payload_for_client(self, payload: dict, client: ClientConnection) -> dict | None:
         if client.bbox is None:

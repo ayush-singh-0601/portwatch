@@ -24,6 +24,13 @@ class TestConnectionManager:
         pos = {"latitude": None, "longitude": None}
         assert ConnectionManager._position_in_bbox(pos, bbox) is True
 
+    def test_position_in_bbox_antimeridian_crossing(self):
+        bbox = [170.0, -10.0, -170.0, 10.0]
+        assert ConnectionManager._position_in_bbox({"latitude": 0.0, "longitude": 175.0}, bbox) is True
+        assert ConnectionManager._position_in_bbox({"latitude": 0.0, "longitude": -175.0}, bbox) is True
+        assert ConnectionManager._position_in_bbox({"latitude": 0.0, "longitude": 150.0}, bbox) is False
+        assert ConnectionManager._position_in_bbox({"latitude": 0.0, "longitude": -150.0}, bbox) is False
+
     def test_filter_payload_for_client_unfiltered(self):
         manager = ConnectionManager()
         client = ClientConnection(websocket=MagicMock(), bbox=None)
