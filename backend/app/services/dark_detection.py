@@ -146,10 +146,15 @@ class DarkVesselDetector:
 
             time_a = pos_a.time
             time_b = pos_b.time
+            if not time_a or not time_b:
+                continue
             delta = time_b - time_a
 
             # Check if there is a gap
-            hours_gap = delta.total_seconds() / 3600.0
+            seconds_gap = delta.total_seconds()
+            if seconds_gap <= 0:
+                continue
+            hours_gap = seconds_gap / 3600.0
 
             # Fast-path optimization: the minimum possible dark event threshold
             # is 6.0 hours (coastal).  If the gap is smaller than 6 hours, it can
