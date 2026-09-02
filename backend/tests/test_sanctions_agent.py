@@ -93,3 +93,16 @@ class TestSanctionsScreeningAgent:
         assert match["matched_field"] == "ownership_entity"
         assert match["match_type"] == "fuzzy"
 
+    async def test_make_match_score_clamping(self):
+        db = AsyncMock()
+        agent = SanctionsScreeningAgent(db)
+        entry = _FakeSanctionsEntry(1, "SAMPLE SANCTION")
+        
+        # Test out of range float rounding/clamping
+        match1 = agent._make_match(entry, 105.0, "exact", "name", "sample")
+        assert match1["match_score"] == 100.0
+
+        match2 = agent._make_match(entry, 87.6543, "fuzzy", "name", "sample")
+        assert match2["match_score"] == 87.65
+
+
