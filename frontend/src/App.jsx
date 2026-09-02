@@ -39,6 +39,8 @@ export default function App() {
       if (e.key === 'Escape') {
         if (searchOpen) {
           setSearchOpen(false)
+        } else if (sidebarOpen) {
+          setSidebarOpen(false)
         } else if (selectedVessel) {
           clearSelection()
         }
@@ -46,7 +48,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [searchOpen, selectedVessel, clearSelection])
+  }, [searchOpen, sidebarOpen, selectedVessel, clearSelection])
 
   // ── Filter vessels ─────────────────────────────────────────
   const filteredVessels = useMemo(() => {
