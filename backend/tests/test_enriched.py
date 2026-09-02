@@ -274,3 +274,21 @@ class TestImoListFiltering:
         assert None not in imo_list
 
 
+# ── Unregistered vessel enrichment with MID ───────────────────────────────────
+
+class TestUnregisteredVesselEnrichment:
+    def test_unregistered_mmsi_resolves_panama(self):
+        from app.utils.flag_lookup import get_flag_from_mmsi
+        flag = get_flag_from_mmsi(355123456)
+        assert flag["code"] == "PAN"
+        assert flag["name"] == "Panama"
+        assert flag["emoji"] == "🇵🇦"
+
+    def test_unregistered_mmsi_resolves_unknown(self):
+        from app.utils.flag_lookup import get_flag_from_mmsi
+        flag = get_flag_from_mmsi(999123456)
+        assert flag["code"] == "UNK"
+        assert flag["emoji"] == "🏳️"
+
+
+
