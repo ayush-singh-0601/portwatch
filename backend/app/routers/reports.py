@@ -89,20 +89,30 @@ async def generate_report(
     )
 
 
+_REPORT_ID_REGEX = re.compile(r"^[a-zA-Z0-9_\-]+$")
+
+
 @router.get(
     "/api/reports/{report_id}",
     summary="Download a generated report",
+    response_description="The report file (PDF or HTML)",
 )
-async def download_report(report_id: str) -> FileResponse:
-    """Download a previously generated report by its ID.
+async def download_report(
+    report_id: str,
+) -> FileResponse:
+    """Download a previously generated intelligence report by ID.
+
+    Args:
+        report_id: Unique report identifier returned by the generate endpoint.
+
+    Returns:
+        The report file as a downloadable attachment.
 
     Raises:
+        HTTPException 400: If the report ID contains invalid path characters.
         HTTPException 404: If the report does not exist.
     """
-    import os
-
-    safe_id = os.path.basename(report_id or "")
-    if not report_id or safe_id != report_id or ".." in report_id:
+    if not report_id or not _REPORT_ID_REGEX.match(report_id) or ".." in report_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid report ID format",
