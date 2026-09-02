@@ -6,7 +6,8 @@ import './RiskBadge.css'
  * @param {{ score: number, size?: number }} props
  */
 export default function RiskBadge({ score = 0, size = 72 }) {
-  const clampedScore = Math.max(0, Math.min(100, score))
+  const safeNum = Number(score)
+  const clampedScore = Number.isFinite(safeNum) ? Math.max(0, Math.min(100, Math.round(safeNum))) : 0
   const color = getRiskColor(clampedScore)
   const label = getRiskLabel(clampedScore)
   const isHigh = clampedScore > 60
