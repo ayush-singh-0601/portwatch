@@ -135,8 +135,8 @@ class RiskScoringAgent:
         if factor:
             factors.append(factor)
 
-        # Sum and cap at 100
-        total = min(100, sum(f.points for f in factors))
+        # Sum and cap between 0 and 100
+        total = max(0, min(100, sum(f.points for f in factors)))
 
         risk_score = RiskScore(
             vessel_imo=vessel_imo,
@@ -398,7 +398,7 @@ class RiskScoringAgent:
         self, vessel: Vessel, now: datetime
     ) -> Optional[RiskFactor]:
         """Vessel age over 20 years → +5."""
-        if vessel.year_built and (now.year - vessel.year_built) > 20:
+        if vessel.year_built and 1850 <= vessel.year_built <= now.year and (now.year - vessel.year_built) > 20:
             age = now.year - vessel.year_built
             return RiskFactor(
                 factor_name="vessel_age",
