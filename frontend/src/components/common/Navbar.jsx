@@ -54,7 +54,11 @@ export default function Navbar({
       </div>
 
       <div className="navbar-center">
-        <div className="navbar-stat">
+        <div
+          className="navbar-stat"
+          title={wsConnected ? 'Live WebSocket telemetry active' : 'Offline / Polling mode'}
+          aria-label={wsConnected ? 'Live WebSocket telemetry active' : 'Offline / Polling mode'}
+        >
           <div
             className="navbar-stat-dot"
             style={{
