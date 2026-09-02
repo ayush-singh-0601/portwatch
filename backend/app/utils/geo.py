@@ -106,3 +106,57 @@ def is_in_bbox(lat: float, lon: float, bbox: list[float] | tuple[float, float, f
         in_lon = lon >= min_lon or lon <= max_lon
     return in_lat and in_lon
 
+
+def calculate_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculate the initial great-circle bearing (forward azimuth) from point A to B.
+
+    Args:
+        lat1: Origin latitude in degrees.
+        lon1: Origin longitude in degrees.
+        lat2: Destination latitude in degrees.
+        lon2: Destination longitude in degrees.
+
+    Returns:
+        Bearing in degrees normalized to [0, 360).
+    """
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    d_lam = math.radians(lon2 - lon1)
+
+    y = math.sin(d_lam) * math.cos(phi2)
+    x = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(d_lam)
+
+    bearing = math.degrees(math.atan2(y, x))
+    return (bearing + 360.0) % 360.0
+
+
+def destination_point(lat: float, lon: float, distance_km: float, bearing_deg: float) -> tuple[float, float]:
+    """Calculate destination coordinates given an origin, distance, and bearing.
+
+    Args:
+        lat: Origin latitude in degrees.
+        lon: Origin longitude in degrees.
+        distance_km: Distance to travel in kilometres.
+        bearing_deg: Travel bearing in degrees [0, 360).
+
+    Returns:
+        Tuple of (destination_latitude, destination_longitude) in degrees.
+    """
+    delta = distance_km / _EARTH_RADIUS_KM
+    theta = math.radians(bearing_deg)
+    phi1 = math.radians(lat)
+    lambda1 = math.radians(lon)
+
+    phi2 = math.asin(
+        math.sin(phi1) * math.cos(delta) + math.cos(phi1) * math.sin(delta) * math.cos(theta)
+    )
+    lambda2 = lambda1 + math.atan2(
+        math.sin(theta) * math.sin(delta) * math.cos(phi1),
+        math.cos(delta) - math.sin(phi1) * math.sin(phi2),
+    )
+
+    dest_lat = math.degrees(phi2)
+    dest_lon = (math.degrees(lambda2) + 540.0) % 360.0 - 180.0
+    return dest_lat, dest_lon
+
+
