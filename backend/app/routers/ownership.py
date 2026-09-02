@@ -86,13 +86,17 @@ async def get_ownership_graph(
     nodes: list[OwnershipEntityResponse] = []
     if entity_ids:
         entities_result = await db.execute(
-            select(OwnershipEntity).where(OwnershipEntity.id.in_(entity_ids))
+            select(OwnershipEntity)
+            .where(OwnershipEntity.id.in_(entity_ids))
+            .order_by(OwnershipEntity.id)
         )
         entities = entities_result.scalars().all()
         nodes = [OwnershipEntityResponse.model_validate(e) for e in entities]
 
+    sorted_edges = sorted(edges, key=lambda e: e.id if e.id is not None else 0)
+
     return OwnershipGraphResponse(
         vessel_imo=imo,
         nodes=nodes,
-        edges=[OwnershipEdgeResponse.model_validate(e) for e in edges],
+        edges=[OwnershipEdgeResponse.model_validate(e) for e in sorted_edges],
     )
