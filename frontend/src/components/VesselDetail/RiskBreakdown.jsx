@@ -99,6 +99,42 @@ const FACTOR_META = {
     maxPoints: 15,
     color: 'var(--warning)',
   },
+  'Suspicious Flag State': {
+    label: 'Suspicious Flag State',
+    icon: '🚩',
+    maxPoints: 15,
+    color: 'var(--warning)',
+  },
+  'Dark Activity Detected': {
+    label: 'Dark Activity Detected',
+    icon: '📡',
+    maxPoints: 25,
+    color: 'var(--warning)',
+  },
+  'Recent Port Call in High-Risk Zone': {
+    label: 'Recent Port Call in High-Risk Zone',
+    icon: '🚢',
+    maxPoints: 20,
+    color: 'var(--danger)',
+  },
+  'Ownership Complexity': {
+    label: 'Ownership Complexity',
+    icon: '🔄',
+    maxPoints: 10,
+    color: 'hsl(38, 92%, 55%)',
+  },
+  'Frequent Flag Hopping': {
+    label: 'Frequent Flag Hopping',
+    icon: '🏴',
+    maxPoints: 15,
+    color: 'var(--warning)',
+  },
+  'Sanctions List Match': {
+    label: 'Sanctions List Match',
+    icon: '⛔',
+    maxPoints: 30,
+    color: 'var(--danger)',
+  },
 }
 
 function getRiskLevelColor(score) {
