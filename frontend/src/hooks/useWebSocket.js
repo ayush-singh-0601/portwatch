@@ -40,6 +40,7 @@ export default function useWebSocket(url) {
   const wsRef = useRef(null)
   const reconnectTimeoutRef = useRef(null)
   const reconnectAttemptsRef = useRef(0)
+  const isUnmountedRef = useRef(false)
   const maxReconnectDelay = 30000
   const pendingUpdatesRef = useRef({})
 
@@ -58,11 +59,14 @@ export default function useWebSocket(url) {
   }, [url])
 
   const connect = useCallback(() => {
+    if (isUnmountedRef.current) return
+
     try {
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
 
       ws.onopen = () => {
+        if (isUnmountedRef.current) return
         console.log('[WS] Connected to', wsUrl)
         setIsConnected(true)
         setError(null)
@@ -70,25 +74,36 @@ export default function useWebSocket(url) {
       }
 
       ws.onmessage = (event) => {
+        if (isUnmountedRef.current) return
         try {
           const msg = JSON.parse(event.data)
 
-          // Backend broadcasts: { type: "position_update", data: { mmsi, latitude, longitude, ... } }
+          // Direct position update: { type: "position_update", data: { ... } }
           if (msg.type === 'position_update' && msg.data) {
-            const d = msg.data
-            queuePositionUpdate(pendingUpdatesRef, d.mmsi || d.imo, d)
+            const key = msg.data.mmsi ?? msg.data.id
+            queuePositionUpdate(pendingUpdatesRef, key, msg.data)
           }
 
-          // Also support batch format: { type: "position_update", vessels: [...] }
-          if (msg.type === 'position_update' && Array.isArray(msg.vessels)) {
-            for (const v of msg.vessels) {
-              queuePositionUpdate(pendingUpdatesRef, v.mmsi || v.imo, v)
+          // Legacy batch format: { type: "position_batch", positions: [ ... ] }
+          if (msg.type === 'position_batch' && Array.isArray(msg.positions)) {
+            for (const pos of msg.positions) {
+              const key = pos.mmsi ?? pos.id
+              queuePositionUpdate(pendingUpdatesRef, key, pos)
             }
           }
 
-          // Single update shorthand: { type: "single_update", mmsi, lat, lon, ... }
-          if (msg.type === 'single_update') {
-            queuePositionUpdate(pendingUpdatesRef, msg.mmsi || msg.imo, msg)
+          // Single position format: { mmsi, latitude, longitude, ... }
+          if (msg.mmsi && (msg.latitude || msg.lat)) {
+            queuePositionUpdate(pendingUpdatesRef, msg.mmsi, msg)
+          }
+
+          // Enriched vessel format: { id, position: { lat, lon }, ... }
+          if (msg.id && msg.position) {
+            queuePositionUpdate(pendingUpdatesRef, msg.id, {
+              ...msg,
+              lat: msg.position.lat,
+              lon: msg.position.lon,
+            })
           }
         } catch {
           // Ignore malformed messages
@@ -96,31 +111,38 @@ export default function useWebSocket(url) {
       }
 
       ws.onclose = () => {
+        if (isUnmountedRef.current) return
         setIsConnected(false)
         wsRef.current = null
 
-        // Auto-reconnect with exponential backoff
-        const attempts = reconnectAttemptsRef.current
+        // Auto-reconnect with bounded exponential backoff
+        const attempts = Math.min(reconnectAttemptsRef.current, 10)
         const delay = Math.min(1000 * Math.pow(2, attempts), maxReconnectDelay)
         console.log(`[WS] Disconnected. Reconnecting in ${delay / 1000}s...`)
         reconnectTimeoutRef.current = setTimeout(() => {
+          if (isUnmountedRef.current) return
           reconnectAttemptsRef.current += 1
           connect()
         }, delay)
       }
 
       ws.onerror = () => {
+        if (isUnmountedRef.current) return
         setError('WebSocket connection error')
         ws.close()
       }
     } catch (err) {
-      setError(err.message)
+      if (!isUnmountedRef.current) {
+        setError(err.message)
+      }
     }
   }, [wsUrl])
 
   useEffect(() => {
+    isUnmountedRef.current = false
     connect()
     return () => {
+      isUnmountedRef.current = true
       if (wsRef.current) {
         wsRef.current.close()
         wsRef.current = null
