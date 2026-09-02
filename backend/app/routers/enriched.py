@@ -26,7 +26,7 @@ from app.models.position import VesselPosition
 from app.models.risk_score import RiskScore
 from app.models.sanctions import SanctionsMatch
 from app.models.vessel import Vessel
-from app.utils.flag_lookup import get_flag_info
+from app.utils.flag_lookup import get_flag_from_mmsi, get_flag_info
 
 logger = logging.getLogger(__name__)
 
@@ -315,7 +315,7 @@ async def get_enriched_vessels(
         if len(enriched) >= limit:
             break
         if mmsi not in registered_mmsis:
-            flag_info = get_flag_info(None)  # unknown flag
+            flag_info = get_flag_from_mmsi(mmsi)
             enriched.append({
                 "id": str(mmsi),
                 "imo": None,
