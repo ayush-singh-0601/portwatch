@@ -231,12 +231,13 @@ class SanctionsScreeningAgent:
         entity_id: int | None = None,
     ) -> dict:
         """Build a standardized match result dict."""
+        normalized_score = round(max(0.0, min(100.0, float(score))), 2)
         return {
             "sanctions_entry_id": entry.id,
             "sanctions_name": entry.entity_name,
             "sanctions_source": entry.source,
             "sanctions_program": entry.program,
-            "match_score": score,
+            "match_score": normalized_score,
             "match_type": match_type,
             "matched_field": matched_field,
             "matched_entity_name": matched_name,
