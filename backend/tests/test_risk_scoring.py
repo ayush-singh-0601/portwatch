@@ -188,4 +188,45 @@ class TestBeneficialOwnerSanctions:
         assert "Ownership chain entity" in factor.evidence_description
 
 
+class TestVesselAgeValidation:
+    def test_normal_old_vessel_scores_five(self):
+        from datetime import datetime, timezone
+        from app.models.vessel import Vessel
+        from app.agents.risk_scoring import RiskScoringAgent
+        
+        agent = RiskScoringAgent(db=None)
+        vessel = Vessel(imo=9123456, name="Old Vessel", year_built=1995)
+        now = datetime(2025, 1, 1, tzinfo=timezone.utc)
+        factor = agent._check_vessel_age(vessel, now)
+        assert factor is not None
+        assert factor.points == 5
+        assert factor.factor_name == "vessel_age"
+
+    def test_young_vessel_scores_none(self):
+        from datetime import datetime, timezone
+        from app.models.vessel import Vessel
+        from app.agents.risk_scoring import RiskScoringAgent
+
+        agent = RiskScoringAgent(db=None)
+        vessel = Vessel(imo=9123456, name="New Vessel", year_built=2020)
+        now = datetime(2025, 1, 1, tzinfo=timezone.utc)
+        factor = agent._check_vessel_age(vessel, now)
+        assert factor is None
+
+    def test_invalid_negative_or_future_year_scores_none(self):
+        from datetime import datetime, timezone
+        from app.models.vessel import Vessel
+        from app.agents.risk_scoring import RiskScoringAgent
+
+        agent = RiskScoringAgent(db=None)
+        now = datetime(2025, 1, 1, tzinfo=timezone.utc)
+        
+        v1 = Vessel(imo=9123456, name="Invalid Vessel 1", year_built=-500)
+        assert agent._check_vessel_age(v1, now) is None
+
+        v2 = Vessel(imo=9123457, name="Invalid Vessel 2", year_built=2099)
+        assert agent._check_vessel_age(v2, now) is None
+
+
+
 
