@@ -10,6 +10,8 @@ import pytest
 from app.utils.geo import (
     NM_TO_KM,
     SHIP_BREAKING_YARDS,
+    calculate_bearing,
+    destination_point,
     haversine_distance,
     is_in_bbox,
     is_within_nm,
@@ -151,4 +153,37 @@ class TestIsInBbox:
         assert is_in_bbox(0.0, -175.0, bbox) is True
         assert is_in_bbox(0.0, 160.0, bbox) is False
         assert is_in_bbox(0.0, -160.0, bbox) is False
+
+
+# ---------------------------------------------------------------------------
+# calculate_bearing and destination_point
+# ---------------------------------------------------------------------------
+
+class TestBearingAndDestination:
+    def test_due_north_bearing(self):
+        bearing = calculate_bearing(0.0, 0.0, 10.0, 0.0)
+        assert bearing == pytest.approx(0.0, abs=1e-3)
+
+    def test_due_east_bearing(self):
+        bearing = calculate_bearing(0.0, 0.0, 0.0, 10.0)
+        assert bearing == pytest.approx(90.0, abs=1e-3)
+
+    def test_due_south_bearing(self):
+        bearing = calculate_bearing(10.0, 0.0, 0.0, 0.0)
+        assert bearing == pytest.approx(180.0, abs=1e-3)
+
+    def test_due_west_bearing(self):
+        bearing = calculate_bearing(0.0, 10.0, 0.0, 0.0)
+        assert bearing == pytest.approx(270.0, abs=1e-3)
+
+    def test_destination_point_north(self):
+        lat, lon = destination_point(0.0, 0.0, 111.19, 0.0)
+        assert lat == pytest.approx(1.0, abs=0.01)
+        assert lon == pytest.approx(0.0, abs=0.01)
+
+    def test_destination_point_east_at_equator(self):
+        lat, lon = destination_point(0.0, 0.0, 111.19, 90.0)
+        assert lat == pytest.approx(0.0, abs=0.01)
+        assert lon == pytest.approx(1.0, abs=0.01)
+
 
