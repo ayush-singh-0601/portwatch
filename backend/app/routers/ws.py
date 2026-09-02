@@ -187,7 +187,19 @@ async def vessel_position_stream(websocket: WebSocket) -> None:
                                 json.dumps({"error": "bbox must be [min_lon, min_lat, max_lon, max_lat]"})
                             )
                             continue
-                        bbox = [float(v) for v in bbox]
+                        parsed_bbox = [float(v) for v in bbox]
+                        min_lon, min_lat, max_lon, max_lat = parsed_bbox
+                        if not (-90.0 <= min_lat <= 90.0 and -90.0 <= max_lat <= 90.0 and min_lat <= max_lat):
+                            await websocket.send_text(
+                                json.dumps({"error": "Invalid latitude range in bbox"})
+                            )
+                            continue
+                        if not (-180.0 <= min_lon <= 180.0 and -180.0 <= max_lon <= 180.0):
+                            await websocket.send_text(
+                                json.dumps({"error": "Invalid longitude range in bbox"})
+                            )
+                            continue
+                        bbox = parsed_bbox
                     manager.update_bbox(websocket, bbox)
                     await websocket.send_text(
                         json.dumps({"status": "filter_updated", "bbox": bbox})
