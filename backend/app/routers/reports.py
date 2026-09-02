@@ -7,6 +7,7 @@ Routes::
     GET   /api/reports/{report_id}    — download a generated report
 """
 
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
