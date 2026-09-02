@@ -68,7 +68,7 @@ def is_in_dead_zone(lat: float, lon: float, dead_zones: list[dict]) -> bool:
 
 
 def point_in_polygon(x: float, y: float, poly: list[list[float]]) -> bool:
-    """Ray casting algorithm for point-in-polygon test.
+    """Ray casting algorithm for point-in-polygon test with bounding box pre-filtering.
 
     Uses the standard even-odd (ray casting) rule.  The intersection test
     is only performed when the edge is non-horizontal (``p1y != p2y``),
@@ -76,6 +76,15 @@ def point_in_polygon(x: float, y: float, poly: list[list[float]]) -> bool:
     horizontal edge is encountered.
     """
     if not poly or len(poly) < 3:
+        return False
+
+    # Fast-path bounding box rejection
+    min_x = min(pt[0] for pt in poly)
+    max_x = max(pt[0] for pt in poly)
+    min_y = min(pt[1] for pt in poly)
+    max_y = max(pt[1] for pt in poly)
+
+    if not (min_x <= x <= max_x and min_y <= y <= max_y):
         return False
 
     n = len(poly)
