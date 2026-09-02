@@ -107,6 +107,11 @@ html {
   text-rendering: optimizeLegibility;
 }
 
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--bg-deep);
