@@ -43,6 +43,18 @@ export default function IdentityCard({ vessel }) {
             {getVesselLabel(vessel.type)}
           </span>
         </div>
+        {vessel.yearBuilt && (
+          <div className="identity-card-item">
+            <span className="label">Year Built</span>
+            <span className="mono identity-card-value">{vessel.yearBuilt}</span>
+          </div>
+        )}
+        {vessel.grossTonnage && (
+          <div className="identity-card-item">
+            <span className="label">Gross Tonnage</span>
+            <span className="mono identity-card-value">{Number(vessel.grossTonnage).toLocaleString()} GT</span>
+          </div>
+        )}
       </div>
     </div>
   )
