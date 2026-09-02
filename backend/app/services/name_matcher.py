@@ -39,8 +39,29 @@ class MatchResult:
     match_type: str
 
 
+_LEGAL_SUFFIXES_REGEX = re.compile(
+    r"\b(limited|ltd|corporation|corp|incorporated|inc|llc|llp|gmbh|sa|s\.a\.|pte\s+ltd|plc|co|company|ag|bv|nv)\b\.?$",
+    re.IGNORECASE,
+)
+
+
+def strip_legal_suffixes(name: str) -> str:
+    """Strip common international legal and corporate entity suffixes.
+
+    Examples:
+        >>> strip_legal_suffixes("Oceanic Shipping Ltd")
+        'Oceanic Shipping'
+        >>> strip_legal_suffixes("Meridian Tankers Corp.")
+        'Meridian Tankers'
+    """
+    if not name:
+        return ""
+    cleaned = _LEGAL_SUFFIXES_REGEX.sub("", name.strip()).strip()
+    return cleaned if cleaned else name
+
+
 @lru_cache(maxsize=16384)
-def normalize_name(name: str) -> str:
+def normalize_name(name: str, strip_suffixes: bool = False) -> str:
     """Normalize a name for comparison.
 
     Steps:
@@ -48,22 +69,21 @@ def normalize_name(name: str) -> str:
     2. Strip accents / combining marks.
     3. Lowercase.
     4. Remove punctuation (keep letters, digits, whitespace).
-    5. Collapse multiple spaces.
+    5. Optionally strip legal company suffixes.
+    6. Collapse multiple spaces.
 
     Args:
         name: Raw name string.
+        strip_suffixes: Whether to strip legal company suffixes (Ltd, Inc, Corp, etc.).
 
     Returns:
         Normalized name ready for fuzzy comparison.
-
-    Examples:
-        >>> normalize_name("SOCIÉTÉ MARITIME D'INVESTISSEMENT")
-        'societe maritime dinvestissement'
-        >>> normalize_name("Al-Quds Corp.")
-        'alquds corp'
     """
     if not name:
         return ""
+
+    if strip_suffixes:
+        name = strip_legal_suffixes(name)
 
     # NFKD decomposition
     text = unicodedata.normalize("NFKD", name)
