@@ -40,7 +40,7 @@ class MatchResult:
 
 
 _LEGAL_SUFFIXES_REGEX = re.compile(
-    r"\b(limited|ltd|corporation|corp|incorporated|inc|llc|llp|gmbh|sa|s\.a\.|pte\s+ltd|plc|co|company|ag|bv|nv)\b\.?$",
+    r"(?:[\s,]+(?:limited|ltd|corporation|corp|incorporated|inc|llc|llp|gmbh|sa|s\.a\.|pte\s+ltd|plc|co|company|ag|bv|nv)\.?)+$",
     re.IGNORECASE,
 )
 
@@ -53,6 +53,8 @@ def strip_legal_suffixes(name: str) -> str:
         'Oceanic Shipping'
         >>> strip_legal_suffixes("Meridian Tankers Corp.")
         'Meridian Tankers'
+        >>> strip_legal_suffixes("Global Logistics S.A.")
+        'Global Logistics'
     """
     if not name:
         return ""

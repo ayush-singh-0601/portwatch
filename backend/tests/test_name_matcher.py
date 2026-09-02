@@ -37,6 +37,19 @@ class TestNormalizeName:
         # 'ﬁ' ligature decomposes to 'fi'
         assert normalize_name("Pacific Transport ﬁ") == "pacific transport fi"
 
+    def test_strip_legal_suffixes(self):
+        from app.services.name_matcher import strip_legal_suffixes
+        assert strip_legal_suffixes("Oceanic Shipping Ltd") == "Oceanic Shipping"
+        assert strip_legal_suffixes("Meridian Tankers Corp.") == "Meridian Tankers"
+        assert strip_legal_suffixes("Pacific Carriers LLC") == "Pacific Carriers"
+        assert strip_legal_suffixes("Global Logistics S.A.") == "Global Logistics"
+        assert strip_legal_suffixes("Singapore Marine Pte Ltd") == "Singapore Marine"
+
+    def test_normalize_with_strip_suffixes(self):
+        assert normalize_name("Oceanic Shipping Ltd", strip_suffixes=True) == "oceanic shipping"
+        assert normalize_name("Meridian Tankers Corp.", strip_suffixes=True) == "meridian tankers"
+
+
 
 class TestMatchEntity:
     def test_exact_match(self):
