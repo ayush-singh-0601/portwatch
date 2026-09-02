@@ -20,6 +20,11 @@ from app.schemas.vessel import VesselListResponse, VesselResponse
 router = APIRouter(prefix="/api/vessels", tags=["Vessels"])
 
 
+def _escape_like(text: str) -> str:
+    """Escape SQL LIKE wildcard characters (_, %) and backslashes."""
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 @router.get(
     "",
     response_model=VesselListResponse,
@@ -40,13 +45,15 @@ async def list_vessels(
 
     # Apply filters
     if name is not None and name.strip():
-        query = query.where(Vessel.name.ilike(f"%{name.strip()}%"))
+        escaped_name = _escape_like(name.strip())
+        query = query.where(Vessel.name.ilike(f"%{escaped_name}%", escape="\\"))
     if imo is not None:
         query = query.where(Vessel.imo == imo)
     if mmsi is not None:
         query = query.where(Vessel.mmsi == mmsi)
     if vessel_type is not None and vessel_type.strip():
-        query = query.where(Vessel.vessel_type.ilike(f"%{vessel_type.strip()}%"))
+        escaped_type = _escape_like(vessel_type.strip())
+        query = query.where(Vessel.vessel_type.ilike(f"%{escaped_type}%", escape="\\"))
     if flag is not None and flag.strip():
         query = query.where(Vessel.flag == flag.strip().upper())
 
