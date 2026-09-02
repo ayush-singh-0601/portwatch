@@ -205,14 +205,22 @@ def extract_position(decoded: dict[str, Any]) -> PositionData | None:
     if mmsi is None or lat is None or lon is None:
         return None
 
-    # Discard invalid coordinates (AIS default for "not available")
-    if lat == 91.0 or lon == 181.0:
+    try:
+        lat_f = float(lat)
+        lon_f = float(lon)
+    except (ValueError, TypeError):
+        return None
+
+    # Discard invalid coordinates (out of WGS-84 bounds or AIS defaults for unavailable)
+    if not (-90.0 <= lat_f <= 90.0 and -180.0 <= lon_f <= 180.0):
+        return None
+    if lat_f == 91.0 or lon_f == 181.0:
         return None
 
     return PositionData(
         mmsi=int(mmsi),
-        latitude=float(lat),
-        longitude=float(lon),
+        latitude=lat_f,
+        longitude=lon_f,
         speed=_safe_float(decoded.get("speed") or decoded.get("sog")),
         course=_safe_float(decoded.get("course") or decoded.get("cog")),
         heading=_safe_float(decoded.get("heading") or decoded.get("true_heading")),
