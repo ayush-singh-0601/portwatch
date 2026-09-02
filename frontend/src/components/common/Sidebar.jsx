@@ -141,6 +141,9 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
                 type="number"
                 min="0"
                 max="100"
+                aria-label="Minimum risk score"
+                aria-valuemin="0"
+                aria-valuemax="100"
                 value={filters.riskMin}
                 onChange={handleRiskMinChange}
               />
@@ -152,6 +155,9 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
                 type="number"
                 min="0"
                 max="100"
+                aria-label="Maximum risk score"
+                aria-valuemin="0"
+                aria-valuemax="100"
                 value={filters.riskMax}
                 onChange={handleRiskMaxChange}
               />
@@ -161,8 +167,8 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
             <div
               className="sidebar-range-fill"
               style={{
-                left: `${filters.riskMin}%`,
-                width: `${filters.riskMax - filters.riskMin}%`,
+                left: `${Math.max(0, Math.min(100, filters.riskMin))}%`,
+                width: `${Math.max(0, Math.min(100, filters.riskMax) - Math.max(0, Math.min(100, filters.riskMin)))}%`,
               }}
             />
           </div>
