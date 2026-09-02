@@ -205,6 +205,47 @@ _FLAGS: dict[str, dict[str, str]] = {
     "ZWE": {"name": "Zimbabwe", "emoji": "🇿🇼"},
 }
 
+# Mapping of ITU Maritime Identification Digits (MID) to ISO alpha-3 flag codes
+_MID_TO_ISO: dict[str, str] = {
+    "209": "CYP", "210": "CYP", "212": "CYP",
+    "211": "DEU",
+    "224": "ESP", "225": "ESP",
+    "226": "FRA", "227": "FRA", "228": "FRA",
+    "232": "GBR", "233": "GBR", "234": "GBR", "235": "GBR",
+    "240": "GRC", "241": "GRC",
+    "247": "ITA",
+    "248": "MLT", "249": "MLT", "256": "MLT",
+    "273": "RUS",
+    "304": "ATG", "305": "ATG",
+    "310": "BMU",
+    "311": "BHS",
+    "312": "BLZ",
+    "316": "CAN",
+    "345": "CYM",
+    "351": "PAN", "352": "PAN", "353": "PAN", "354": "PAN", "355": "PAN", "356": "PAN", "357": "PAN",
+    "366": "USA", "367": "USA", "368": "USA", "369": "USA",
+    "375": "VCT", "376": "VCT", "377": "VCT",
+    "412": "CHN", "413": "CHN", "414": "CHN",
+    "419": "IND",
+    "431": "JPN", "432": "JPN",
+    "440": "KOR", "441": "KOR",
+    "477": "HKG",
+    "503": "AUS",
+    "525": "IDN",
+    "533": "MYS",
+    "538": "MHL",
+    "563": "SGP", "564": "SGP", "565": "SGP", "566": "SGP",
+    "574": "VNM",
+    "576": "VUT", "577": "VUT",
+    "601": "ZAF",
+    "613": "CMR",
+    "620": "COM",
+    "636": "LBR",
+    "657": "NGA",
+    "671": "TGO",
+    "710": "BRA",
+}
+
 
 def get_flag_info(code: str | None) -> dict[str, str] | None:
     """Return ``{"code": ..., "name": ..., "emoji": ...}`` for a flag code.
@@ -218,3 +259,24 @@ def get_flag_info(code: str | None) -> dict[str, str] | None:
         # Return a generic entry with the code only
         return {"code": code.upper(), "name": code.upper(), "emoji": "🏴"}
     return {"code": code.upper(), "name": entry["name"], "emoji": entry["emoji"]}
+
+
+def get_flag_from_mmsi(mmsi: int | str | None) -> dict[str, str] | None:
+    """Resolve flag state information from an MMSI using ITU MID prefixes.
+
+    Args:
+        mmsi: The 9-digit MMSI number as integer or string.
+
+    Returns:
+        Dict with keys code, name, emoji or None if unresolvable.
+    """
+    if mmsi is None:
+        return None
+    digits = str(mmsi).strip()
+    if len(digits) < 3:
+        return None
+    mid = digits[:3]
+    iso_code = _MID_TO_ISO.get(mid)
+    if iso_code:
+        return get_flag_info(iso_code)
+    return {"code": "UNK", "name": "Unknown", "emoji": "🏳️"}
