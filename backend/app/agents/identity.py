@@ -134,15 +134,16 @@ class IdentityResolutionAgent:
         """Detect anomalies in the ownership structure."""
         anomalies = []
 
-        # Circular ownership
+        # Circular ownership (cycles of length >= 2)
         cycles = list(nx.simple_cycles(G))
         for cycle in cycles:
-            anomalies.append({
-                "type": "circular_ownership",
-                "severity": "high",
-                "description": f"Circular ownership detected: {' → '.join(cycle)}",
-                "nodes": cycle,
-            })
+            if len(cycle) >= 2:
+                anomalies.append({
+                    "type": "circular_ownership",
+                    "severity": "high",
+                    "description": f"Circular ownership detected: {' → '.join(cycle)}",
+                    "nodes": cycle,
+                })
 
         # Excessive depth (> 5 layers)
         vessel_node = f"vessel_{vessel.imo}"
@@ -158,9 +159,9 @@ class IdentityResolutionAgent:
                             "nodes": path,
                         })
 
-        # Flag changes (from vessel history)
+        # Flag aged vessel
         current_year = datetime.now(timezone.utc).year
-        if vessel.year_built and (current_year - vessel.year_built) > 20:
+        if vessel.year_built and 1850 <= vessel.year_built <= current_year and (current_year - vessel.year_built) > 20:
             anomalies.append({
                 "type": "aged_vessel",
                 "severity": "low",
