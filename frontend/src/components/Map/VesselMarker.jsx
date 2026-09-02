@@ -93,6 +93,7 @@ function VesselMarker({ vessel, isSelected, onClick }) {
       position={position}
       icon={icon}
       eventHandlers={eventHandlers}
+      title={vessel.name || `Vessel ${vessel.mmsi || vessel.id}`}
     >
       <Tooltip
         className="vessel-tooltip"
@@ -101,8 +102,8 @@ function VesselMarker({ vessel, isSelected, onClick }) {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontWeight: 700, fontSize: '0.875rem' }}>{vessel.name}</span>
-            <span style={{ fontSize: '0.9rem' }}>{vessel.flag?.emoji}</span>
+            <span style={{ fontWeight: 700, fontSize: '0.875rem' }}>{vessel.name || `MMSI ${vessel.mmsi || '—'}`}</span>
+            <span style={{ fontSize: '0.9rem' }}>{vessel.flag?.emoji || '🏳️'}</span>
           </div>
           <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
             <span style={{
@@ -115,7 +116,7 @@ function VesselMarker({ vessel, isSelected, onClick }) {
               {getVesselLabel(vessel.type)}
             </span>
             <span>{Number.isFinite(speed) ? speed.toFixed(1) : '0.0'} kn</span>
-            <span>{Number.isFinite(heading) ? Math.round(heading) : 0} deg</span>
+            <span>{Number.isFinite(heading) ? Math.round(heading) : 0}°</span>
           </div>
           {vessel.riskScore > 60 && (
             <div style={{
@@ -134,7 +135,7 @@ function VesselMarker({ vessel, isSelected, onClick }) {
                 background: getRiskColor(vessel.riskScore),
                 display: 'inline-block',
               }}/>
-              {getRiskLabelShort(vessel.riskScore)} RISK - {vessel.riskScore}
+              {getRiskLabelShort(vessel.riskScore)} RISK — {vessel.riskScore}
             </div>
           )}
         </div>
