@@ -68,3 +68,26 @@ class TestConnectionManager:
         # Idempotent disconnect
         manager.disconnect(ws)
         assert manager.active_connections == 0
+
+    @pytest.mark.asyncio
+    async def test_broadcast_disconnected_client_cleanup(self):
+        manager = ConnectionManager()
+        ws_good = MagicMock()
+        ws_good.accept = AsyncMock()
+        ws_good.send_text = AsyncMock()
+
+        ws_broken = MagicMock()
+        ws_broken.accept = AsyncMock()
+        ws_broken.send_text = AsyncMock(side_effect=RuntimeError("Connection closed"))
+
+        await manager.connect(ws_good)
+        await manager.connect(ws_broken)
+        assert manager.active_connections == 2
+
+        payload = {"type": "position_update", "data": {"lat": 1.5, "lon": 103.5}}
+        await manager.broadcast(payload)
+
+        # Broken client should have been cleaned up
+        assert manager.active_connections == 1
+        ws_good.send_text.assert_awaited_once()
+
