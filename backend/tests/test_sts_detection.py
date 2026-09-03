@@ -41,3 +41,11 @@ class TestSTSDetectionHelpers:
         detector = STSTransferDetector(db)
         is_inside = await detector._check_in_port_limits(1.80, 104.20)
         assert is_inside is False
+
+    async def test_empty_ports_table_defaults_to_false(self):
+        db = AsyncMock()
+        db.execute = AsyncMock(side_effect=[Exception("PostGIS not installed"), MagicMock(all=lambda: [])])
+        detector = STSTransferDetector(db)
+        is_inside = await detector._check_in_port_limits(1.27, 103.82)
+        assert is_inside is False
+
