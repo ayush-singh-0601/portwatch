@@ -296,6 +296,24 @@ export default function OwnershipGraph({ vessel, graphData }) {
     return () => simulation.stop()
   }, [vessel, graphData, dimensions])
 
+  const handleZoomIn = () => {
+    if (svgRef.current) {
+      d3.select(svgRef.current).transition().duration(250).call(d3.zoom().scaleBy, 1.3)
+    }
+  }
+
+  const handleZoomOut = () => {
+    if (svgRef.current) {
+      d3.select(svgRef.current).transition().duration(250).call(d3.zoom().scaleBy, 0.7)
+    }
+  }
+
+  const handleResetZoom = () => {
+    if (svgRef.current) {
+      d3.select(svgRef.current).transition().duration(350).call(d3.zoom().transform, d3.zoomIdentity)
+    }
+  }
+
   return (
     <div className="ownership-graph-container" ref={containerRef}>
       <div className="ownership-graph-header">
@@ -308,7 +326,11 @@ export default function OwnershipGraph({ vessel, graphData }) {
           </svg>
           Ownership Network
         </h4>
-        <span className="ownership-graph-hint">Drag to rearrange • Scroll to zoom</span>
+        <div className="ownership-graph-controls">
+          <button className="ownership-ctrl-btn" onClick={handleZoomIn} title="Zoom in" aria-label="Zoom in">+</button>
+          <button className="ownership-ctrl-btn" onClick={handleZoomOut} title="Zoom out" aria-label="Zoom out">−</button>
+          <button className="ownership-ctrl-btn" onClick={handleResetZoom} title="Reset zoom" aria-label="Reset zoom">⟲</button>
+        </div>
       </div>
       <svg
         ref={svgRef}
