@@ -48,11 +48,11 @@ class SDNEntity:
 
 
 def normalize_text(text: str | None) -> str:
-    """Normalize unicode text for consistent matching."""
+    """Normalize unicode text and whitespace for consistent matching."""
     if not text:
         return ""
     text = unicodedata.normalize("NFKD", text)
-    return text.strip()
+    return " ".join(text.split())
 
 
 async def download_sdn_xml(output_path: Path) -> Path:
