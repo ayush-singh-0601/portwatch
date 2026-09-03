@@ -11,6 +11,24 @@
   padding: 40px;
 }
 
+.loading-spinner-sm {
+  gap: 8px;
+  padding: 12px;
+}
+
+.loading-spinner-sm .spinner-text {
+  font-size: 0.75rem;
+}
+
+.loading-spinner-lg {
+  gap: 20px;
+  padding: 60px;
+}
+
+.loading-spinner-lg .spinner-text {
+  font-size: 1rem;
+}
+
 .spinner-icon {
   animation: spinSlow 3s linear infinite;
   transform-origin: 50px 50px;
