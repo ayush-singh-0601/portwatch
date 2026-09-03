@@ -39,8 +39,6 @@ class BehaviorAnalysisAgent:
         
         Saves detected dark events and logs spoofing/loitering anomalies.
         """
-        logger.info(f"Running behavior analysis for vessel IMO {vessel_imo} (MMSI: {mmsi})")
-
         results = {
             "vessel_imo": vessel_imo,
             "dark_events_detected": 0,
@@ -48,6 +46,12 @@ class BehaviorAnalysisAgent:
             "spoofing_anomalies_detected": 0,
             "loitering_events_detected": 0,
         }
+
+        if not vessel_imo or vessel_imo <= 0:
+            logger.warning(f"Invalid vessel IMO {vessel_imo}. Cannot run behavior analysis.")
+            return results
+
+        logger.info(f"Running behavior analysis for vessel IMO {vessel_imo} (MMSI: {mmsi})")
 
         if not mmsi:
             logger.warning(f"Vessel IMO {vessel_imo} has no MMSI. Cannot run behavior analysis.")
