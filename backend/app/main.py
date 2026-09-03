@@ -105,8 +105,13 @@ def create_app() -> FastAPI:
     # ── Health check ───────────────────────────────────────────────
     @app.get("/health", tags=["System"])
     async def health_check() -> dict[str, str]:
-        """Basic health check endpoint."""
-        return {"status": "healthy", "service": "portwatch-api"}
+        """Basic health check endpoint returning service status and environment."""
+        return {
+            "status": "healthy",
+            "service": "portwatch-api",
+            "version": "0.1.0",
+            "environment": settings.APP_ENV,
+        }
 
     return app
 
