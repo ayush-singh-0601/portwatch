@@ -34,10 +34,10 @@ OFSI_SANCTIONS_URL = (
 
 
 def _normalize(text: str | None) -> str:
-    """Normalize unicode and strip whitespace."""
+    """Normalize unicode and collapse whitespace."""
     if not text:
         return ""
-    return unicodedata.normalize("NFKD", text).strip()
+    return " ".join(unicodedata.normalize("NFKD", text).split())
 
 
 def _find_text(element, tag: str) -> str:
