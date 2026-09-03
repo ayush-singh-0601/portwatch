@@ -4,14 +4,16 @@
 
 import './LoadingSpinner.css'
 
-export default function LoadingSpinner({ text = 'Loading...' }) {
+export default function LoadingSpinner({ text = 'Loading...', size = 'md' }) {
+  const pixelSize = size === 'sm' ? 24 : size === 'lg' ? 72 : 48
+
   return (
-    <div className="loading-spinner" role="status" aria-live="polite">
+    <div className={`loading-spinner loading-spinner-${size}`} role="status" aria-live="polite">
       <svg
         className="spinner-icon"
         viewBox="0 0 100 100"
-        width="48"
-        height="48"
+        width={pixelSize}
+        height={pixelSize}
         aria-hidden="true"
       >
         {/* Outer ring */}
