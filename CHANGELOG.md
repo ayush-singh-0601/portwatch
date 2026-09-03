@@ -5,6 +5,24 @@ All notable changes to the PortWatch maritime OSINT platform will be documented 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-09-04
+
+### Added
+- **UI Error Boundary**: React `ErrorBoundary` with dark-theme crash recovery UI and retry actions in `ErrorBoundary.jsx` and `ErrorBoundary.css`.
+- **Clipboard Utility & Click-to-Copy**: Added `copyToClipboard` with toast feedback for IMO and MMSI in `IdentityCard.jsx`.
+- **Vessel Map Navigation Controls**: Added floating map controls in `VesselMap.jsx` for resetting global view and focusing selected vessels.
+- **Ownership Graph Zoom Controls**: Added D3 zoom in, zoom out, and reset view toolbar in `OwnershipGraph.jsx`.
+- **Search Enhancements**: Clear search button and live accessibility announcements in `VesselSearch.jsx`.
+- **AIS Ship Type Code Mapping**: Numerical ITU ship type classification in `vesselTypes.js`.
+- **API Error Normalizer**: Centralized `getApiErrorMessage` utility in `api.js`.
+- **System Health Endpoint**: Extended `/health` with environment and service metadata in `main.py`.
+
+### Fixed & Optimized
+- **Spatial Pre-filtering**: Added bounding-box pre-checks for port limit proximity scanning in `sts_detection.py`.
+- **Sanctions Router Filters**: Added `min_score` and `source` query parameters to `/api/vessels/{imo}/sanctions`.
+- **Safe Graph Initialization**: Guarded D3 simulation against 0-dimension SVG containers.
+- **Test Coverage Expansion**: Added 8 new test suites across backend and frontend, achieving 182 passed backend tests and 22 frontend unit tests.
+
 ## [1.1.0] - 2026-08-26
 
 ### Added
