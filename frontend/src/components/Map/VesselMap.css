@@ -48,3 +48,41 @@
 .leaflet-popup-close-button:hover {
   color: var(--accent) !important;
 }
+
+/* Custom Map Controls */
+.map-custom-controls {
+  margin-top: 12px;
+  margin-right: 12px;
+}
+
+.map-ctrl-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.map-ctrl-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md, 10px);
+  background: var(--bg-surface, #131b2e);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary, #ffffff);
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-md, 0 4px 16px rgba(0, 0, 0, 0.4));
+  transition: all var(--transition-fast);
+}
+
+.map-ctrl-btn:hover {
+  background: var(--bg-elevated, #1c2640);
+  border-color: var(--accent, #14b8a6);
+  transform: scale(1.05);
+}
