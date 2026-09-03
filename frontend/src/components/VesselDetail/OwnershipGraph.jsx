@@ -166,15 +166,14 @@ export default function OwnershipGraph({ vessel, graphData }) {
     if (!vessel) return
 
     const data = normalizeGraphData(vessel, graphData)
-    if (!data.nodes || data.nodes.length === 0) return
+    const { width, height } = dimensions
+    if (!data.nodes || data.nodes.length === 0 || width <= 0 || height <= 0 || !svgRef.current) return
 
     // Clear stale fixed positions from any previous drag interactions
     data.nodes.forEach(d => { d.fx = null; d.fy = null })
 
     const svg = d3.select(svgRef.current)
     svg.selectAll('*').remove()
-
-    const { width, height } = dimensions
 
     // Create zoom group
     const g = svg.append('g')
