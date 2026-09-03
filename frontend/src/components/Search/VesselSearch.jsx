@@ -111,6 +111,11 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
           <kbd className="search-kbd">ESC</kbd>
         </div>
 
+        {/* Screen reader search status */}
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {isSearching ? 'Searching vessels...' : `${results.length} vessels found`}
+        </div>
+
         {/* Results */}
         {results.length > 0 && (
           <ul id="search-results-list" className="search-results" ref={listRef} role="listbox" aria-label="Vessel search results">
