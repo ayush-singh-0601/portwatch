@@ -204,7 +204,13 @@ class STSTransferDetector:
             )
             return False
 
+        # Fast bounding-box pre-filtering (1 deg latitude ≈ 111 km)
+        dlat_max = _PORT_LIMIT_RADIUS_KM / 110.0
         for (p_lat, p_lon) in port_coords:
+            if p_lat is None or p_lon is None:
+                continue
+            if abs(p_lat - lat) > dlat_max:
+                continue
             if haversine_distance(lat, lon, p_lat, p_lon) <= _PORT_LIMIT_RADIUS_KM:
                 return True
         return False
