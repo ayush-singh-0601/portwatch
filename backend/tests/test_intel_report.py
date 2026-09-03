@@ -30,6 +30,7 @@ class _FakeRiskScore:
 
 class TestIntelReportAgentLogic:
     def test_risk_classification(self):
+        assert IntelReportAgent._classify_risk(None) == "unknown"
         assert IntelReportAgent._classify_risk(10) == "low"
         assert IntelReportAgent._classify_risk(25) == "medium"
         assert IntelReportAgent._classify_risk(50) == "high"
