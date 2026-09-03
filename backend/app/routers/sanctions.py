@@ -7,7 +7,7 @@ Routes::
     POST  /api/vessels/{imo}/screen     — trigger fresh screening
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -79,6 +79,8 @@ class ScreeningTriggerResponse(BaseModel):
 )
 async def get_sanctions(
     imo: int,
+    min_score: float = Query(0.0, ge=0.0, le=100.0, description="Minimum match confidence score"),
+    source: str | None = Query(None, description="Filter by sanctions source (OFAC, EU, UN)"),
     db: AsyncSession = Depends(get_db),
 ) -> SanctionsScreeningResponse:
     """Return all existing sanctions matches for a vessel.
@@ -97,13 +99,23 @@ async def get_sanctions(
         )
 
     # Fetch matches with eager-loaded sanctions entries
-    matches_result = await db.execute(
+    stmt = (
         select(SanctionsMatch)
         .where(SanctionsMatch.vessel_imo == imo)
         .options(selectinload(SanctionsMatch.sanctions_entry))
         .order_by(SanctionsMatch.match_score.desc())
     )
-    matches = list(matches_result.scalars().all())
+
+    if min_score > 0.0:
+        stmt = stmt.where(SanctionsMatch.match_score >= min_score)
+
+    matches_result = await db.execute(stmt)
+    all_matches = list(matches_result.scalars().all())
+
+    if source:
+        matches = [m for m in all_matches if m.sanctions_entry and m.sanctions_entry.source.upper() == source.upper()]
+    else:
+        matches = all_matches
 
     highest = max((m.match_score for m in matches), default=None)
 
