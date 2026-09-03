@@ -142,7 +142,7 @@ export default function VesselPanel({ vessel, onClose }) {
   if (!vessel) return null
 
   return (
-    <div className="vessel-panel animate-slideRight">
+    <div className="vessel-panel glass-panel animate-slideRight">
       {/* Close button */}
       <button className="vessel-panel-close" onClick={onClose} aria-label="Close panel">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -152,11 +152,11 @@ export default function VesselPanel({ vessel, onClose }) {
 
       {/* Header */}
       <div className="vessel-panel-header">
-        <div className="vessel-panel-header-top">
-          <div className="vessel-panel-name-section">
+        <div className="vessel-panel-title-row">
+          <div className="vessel-panel-name-group">
             <h2 className="vessel-panel-name">{vessel.name}</h2>
             <div className="vessel-panel-flag">
-              <span className="vessel-panel-flag-emoji">{vessel.flag?.emoji}</span>
+              <span className="vessel-panel-flag-emoji">{vessel.flag?.emoji ?? '🏳️'}</span>
               <span className="vessel-panel-flag-name">{vessel.flag?.name}</span>
             </div>
           </div>
@@ -178,15 +178,17 @@ export default function VesselPanel({ vessel, onClose }) {
 
       {/* Tabs */}
       <div className="tab-bar" role="tablist" aria-label="Vessel detail sections">
-        {TABS.map((tab) => (
+        {TABS.map((tab, idx) => (
           <button
             key={tab}
             id={`tab-${tab.toLowerCase()}`}
             role="tab"
+            tabIndex={activeTab === tab ? 0 : -1}
             aria-selected={activeTab === tab}
             aria-controls={`tabpanel-${tab.toLowerCase()}`}
             className={`tab-bar-item ${activeTab === tab ? 'active' : ''}`}
             onClick={() => setActiveTab(tab)}
+            onKeyDown={(e) => handleTabKeyDown(e, idx)}
           >
             {tab}
           </button>
