@@ -25,23 +25,34 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    const message =
-      error.response?.data?.detail ||
-      error.response?.data?.message ||
-      error.message ||
-      'An unexpected error occurred'
-
+    const message = getApiErrorMessage(error)
     console.error('[API Error]', {
       url: error.config?.url,
       status: error.response?.status,
       message,
     })
-
     return Promise.reject({ message, status: error.response?.status })
   }
 )
 
 // ── Helper ────────────────────────────────────────────────────
+export function getApiErrorMessage(error) {
+  if (!error) return 'An unexpected error occurred'
+  if (typeof error === 'string') return error
+  if (error.response?.data?.detail) {
+    const detail = error.response.data.detail
+    if (typeof detail === 'string') return detail
+    if (Array.isArray(detail) && detail.length > 0) {
+      return detail[0].msg || JSON.stringify(detail[0])
+    }
+  }
+  return (
+    error.response?.data?.message ||
+    error.message ||
+    'An unexpected error occurred'
+  )
+}
+
 function cleanImo(imo) {
   if (!imo) return imo
   const digits = String(imo).replace(/\D/g, '')
