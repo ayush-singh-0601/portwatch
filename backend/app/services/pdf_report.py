@@ -12,8 +12,6 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
 
-logger = logging.getLogger(__name__)
-
 # Template directory
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 
@@ -24,6 +22,28 @@ _jinja_env = Environment(
     trim_blocks=True,
     lstrip_blocks=True,
 )
+
+
+def _risk_class(score: float | int | None) -> str:
+    if score is None:
+        return "risk-unknown"
+    if score <= 30:
+        return "risk-low"
+    if score <= 60:
+        return "risk-med"
+    return "risk-high"
+
+
+def _format_num(val: float | int | None) -> str:
+    if val is None:
+        return "—"
+    return f"{val:,.0f}" if isinstance(val, (int, float)) else str(val)
+
+
+_jinja_env.filters["risk_class"] = _risk_class
+_jinja_env.filters["format_num"] = _format_num
+
+
 
 
 def render_html(template_name: str, context: dict[str, Any]) -> str:
