@@ -74,21 +74,16 @@ export function getVesselLabel(type) {
 }
 
 /**
- * Returns an SVG path string for a ship icon pointing up (heading 0).
- * The marker component applies rotation based on vessel heading.
+ * Map numerical AIS ITU ship type code (0-99) to standard category.
  */
-export function getVesselIcon(type) {
-  const color = getVesselColor(type)
-  return `
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g filter="url(#glow)">
-        <path d="M14 3 L22 22 L14 18 L6 22 Z" fill="${color}" fill-opacity="0.9" stroke="${color}" stroke-width="1" stroke-linejoin="round"/>
-      </g>
-      <defs>
-        <filter id="glow" x="-2" y="-2" width="32" height="32">
-          <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="${color}" flood-opacity="0.5"/>
-        </filter>
-      </defs>
-    </svg>
-  `
+export function mapShipTypeCodeToCategory(code) {
+  const num = Number(code)
+  if (!Number.isFinite(num)) return 'other'
+  if (num === 30) return 'fishing'
+  if (num === 35 || num === 55) return 'military'
+  if (num >= 60 && num <= 69) return 'passenger'
+  if (num >= 70 && num <= 79) return 'cargo'
+  if (num >= 80 && num <= 89) return 'tanker'
+  return 'other'
 }
+
