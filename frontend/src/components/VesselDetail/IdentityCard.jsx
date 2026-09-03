@@ -1,26 +1,53 @@
+import { useState } from 'react'
 import { getVesselColor, getVesselLabel } from '../../utils/vesselTypes'
+import { copyToClipboard } from '../../utils/clipboard'
 import './IdentityCard.css'
 
 /**
  * Card showing vessel identity — IMO, MMSI, call sign, flag, type with dot indicator.
  */
 export default function IdentityCard({ vessel }) {
+  const [copiedField, setCopiedField] = useState(null)
+
   if (!vessel) return null
 
   const typeColor = getVesselColor(vessel.type)
+
+  const handleCopy = async (field, value) => {
+    if (!value) return
+    const ok = await copyToClipboard(value)
+    if (ok) {
+      setCopiedField(field)
+      setTimeout(() => setCopiedField(null), 2000)
+    }
+  }
 
   return (
     <div className="identity-card">
       <h4 className="vessel-panel-section-title">Identity</h4>
 
       <div className="identity-card-grid">
-        <div className="identity-card-item">
+        <div
+          className="identity-card-item identity-card-copyable"
+          onClick={() => handleCopy('imo', vessel.imo)}
+          title="Click to copy IMO"
+        >
           <span className="label">IMO Number</span>
-          <span className="mono identity-card-value">{vessel.imo || '—'}</span>
+          <span className="mono identity-card-value">
+            {vessel.imo || '—'}
+            {copiedField === 'imo' && <span className="identity-card-copied">Copied!</span>}
+          </span>
         </div>
-        <div className="identity-card-item">
+        <div
+          className="identity-card-item identity-card-copyable"
+          onClick={() => handleCopy('mmsi', vessel.mmsi)}
+          title="Click to copy MMSI"
+        >
           <span className="label">MMSI</span>
-          <span className="mono identity-card-value">{vessel.mmsi || '—'}</span>
+          <span className="mono identity-card-value">
+            {vessel.mmsi || '—'}
+            {copiedField === 'mmsi' && <span className="identity-card-copied">Copied!</span>}
+          </span>
         </div>
         <div className="identity-card-item">
           <span className="label">Call Sign</span>
