@@ -200,6 +200,25 @@ PortWatch includes low-latency engineering optimizations across the telemetry in
 
 ---
 
+## 🧪 Testing & Verification
+
+PortWatch includes comprehensive test suites covering both the Python backend and React frontend:
+
+### Backend Tests
+```bash
+cd backend
+.\venv\Scripts\python -m pytest
+```
+
+### Frontend Tests & Production Build
+```bash
+cd frontend
+npm test
+npm run build
+```
+
+---
+
 ## 📝 License & Contributing
 
 PortWatch is open-source software licensed under the [AGPL-3.0 License](LICENSE).
