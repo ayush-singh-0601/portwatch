@@ -177,7 +177,7 @@ export default function VesselPanel({ vessel, onClose }) {
       <hr className="divider" />
 
       {/* Tabs */}
-      <div className="tab-bar" role="tablist" aria-label="Vessel detail sections">
+      <div className="tab-bar" role="tablist" aria-orientation="horizontal" aria-label="Vessel detail sections">
         {TABS.map((tab, idx) => (
           <button
             key={tab}
