@@ -53,11 +53,18 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
         const selected = results[Math.min(activeIndex, results.length - 1)] || results[0]
         if (selected) onSelect(selected)
       } else if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
         onClose()
       }
     },
     [results, activeIndex, onSelect, onClose]
   )
+
+  const handleClearQuery = () => {
+    setQuery('')
+    inputRef.current?.focus()
+  }
 
   // Scroll active item into view
   useEffect(() => {
@@ -91,6 +98,16 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
           />
+          {query && (
+            <button
+              className="search-clear-btn"
+              onClick={handleClearQuery}
+              aria-label="Clear search input"
+              title="Clear search"
+            >
+              ✕
+            </button>
+          )}
           <kbd className="search-kbd">ESC</kbd>
         </div>
 
