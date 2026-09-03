@@ -219,7 +219,9 @@ class IntelReportAgent:
             return []
 
     @staticmethod
-    def _classify_risk(score: int) -> str:
+    def _classify_risk(score: float | int | None) -> str:
+        if score is None:
+            return "unknown"
         if score < 25:
             return "low"
         if score < 50:
