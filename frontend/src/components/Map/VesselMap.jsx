@@ -143,6 +143,45 @@ function VesselMarkerLayer({ vessels, selectedVessel, onVesselClick, viewport })
   )
 }
 
+function MapNavigationControls({ selectedVessel }) {
+  const map = useMapEvents({})
+
+  const handleResetView = () => {
+    map.flyTo([20, 0], 3, { duration: 1 })
+  }
+
+  const handleFocusSelected = () => {
+    if (selectedVessel?.position?.lat && selectedVessel?.position?.lon) {
+      map.flyTo([Number(selectedVessel.position.lat), Number(selectedVessel.position.lon)], 8, { duration: 1 })
+    }
+  }
+
+  return (
+    <div className="map-custom-controls leaflet-top leaflet-right">
+      <div className="leaflet-control map-ctrl-group">
+        <button
+          className="map-ctrl-btn"
+          onClick={handleResetView}
+          title="Reset Global View"
+          aria-label="Reset Global View"
+        >
+          🌍
+        </button>
+        {selectedVessel && (
+          <button
+            className="map-ctrl-btn"
+            onClick={handleFocusSelected}
+            title="Recenter on Selected Vessel"
+            aria-label="Recenter on Selected Vessel"
+          >
+            🎯
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function VesselMap({ vessels = [], selectedVessel, onVesselClick }) {
   const [viewport, setViewport] = useState(null)
 
@@ -166,6 +205,7 @@ export default function VesselMap({ vessels = [], selectedVessel, onVesselClick 
 
       <MapResizeHandler />
       <MapViewportTracker onViewportChange={setViewport} />
+      <MapNavigationControls selectedVessel={selectedVessel} />
       <VesselMarkerLayer
         vessels={vessels}
         selectedVessel={selectedVessel}
