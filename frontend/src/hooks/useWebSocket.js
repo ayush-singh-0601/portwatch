@@ -84,6 +84,14 @@ export default function useWebSocket(url) {
             queuePositionUpdate(pendingUpdatesRef, key, msg.data)
           }
 
+          // Vessel batch update: { type: "position_update", vessels: [ ... ] }
+          if (msg.type === 'position_update' && Array.isArray(msg.vessels)) {
+            for (const v of msg.vessels) {
+              const key = v.mmsi ?? v.id
+              queuePositionUpdate(pendingUpdatesRef, key, v)
+            }
+          }
+
           // Legacy batch format: { type: "position_batch", positions: [ ... ] }
           if (msg.type === 'position_batch' && Array.isArray(msg.positions)) {
             for (const pos of msg.positions) {
