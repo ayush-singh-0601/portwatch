@@ -96,9 +96,20 @@ def is_in_bbox(lat: float, lon: float, bbox: list[float] | tuple[float, float, f
 
     Handles antimeridian (180th meridian) crossing when min_lon > max_lon.
     """
-    if len(bbox) != 4 or lat is None or lon is None:
+    if bbox is None or lat is None or lon is None:
         return False
-    min_lon, min_lat, max_lon, max_lat = bbox
+    try:
+        if len(bbox) != 4:
+            return False
+        min_lon = float(bbox[0])
+        min_lat = float(bbox[1])
+        max_lon = float(bbox[2])
+        max_lat = float(bbox[3])
+        lat = float(lat)
+        lon = float(lon)
+    except (TypeError, ValueError, IndexError):
+        return False
+
     in_lat = min_lat <= lat <= max_lat
     if min_lon <= max_lon:
         in_lon = min_lon <= lon <= max_lon
