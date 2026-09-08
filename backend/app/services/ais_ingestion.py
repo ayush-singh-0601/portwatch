@@ -272,16 +272,17 @@ async def populate_vessel_analytics(db: Any, vessel: Vessel) -> None:
         from datetime import timedelta
 
         # 1. Create corporate ownership entities and edges
+        v_name = vessel.name or f"MMSI-{vessel.mmsi or vessel.imo}"
         companies = [
-            f"{vessel.name} Holdings Ltd",
-            f"{vessel.name} Shipping Corp",
+            f"{v_name} Holdings Ltd",
+            f"{v_name} Shipping Corp",
             "Maritime Trust Group",
             "Blue Water Shipping SA",
             "Pacific Shipping Co",
             "Global Carrier Ltd",
         ]
         operator_name = random.choice(companies)
-        owner_name = f"{vessel.name} Owner Corp"
+        owner_name = f"{v_name} Owner Corp"
         ubo_name = "Beneficial Holdings Group"
 
         # Helper to get or create entity
@@ -371,7 +372,7 @@ async def populate_vessel_analytics(db: Any, vessel: Vessel) -> None:
         # 3. Sanctions Watchlist (5% chance of match)
         is_sanctioned = random.random() < 0.05
         if is_sanctioned:
-            s_name = f"OFAC Watchlist Match - {vessel.name.upper()}"
+            s_name = f"OFAC Watchlist Match - {(vessel.name or 'UNKNOWN').upper()}"
             res = await db.execute(select(SanctionsEntry).where(SanctionsEntry.entity_name == s_name))
             s_entry = res.scalar_one_or_none()
             if not s_entry:
@@ -430,7 +431,7 @@ async def populate_vessel_analytics(db: Any, vessel: Vessel) -> None:
             )
             db.add(rf)
             
-        logger.info("Successfully populated dynamic analytics for newly registered vessel %s (IMO %d)", vessel.name, vessel.imo)
+        logger.info("Successfully populated dynamic analytics for newly registered vessel %s (IMO %d)", vessel.name or "UNKNOWN", vessel.imo)
     except Exception as exc:
         logger.error("Error populating dynamic analytics for vessel %d: %s", vessel.imo, exc, exc_info=True)
 
