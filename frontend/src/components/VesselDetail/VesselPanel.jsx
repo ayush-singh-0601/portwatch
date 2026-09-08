@@ -139,6 +139,20 @@ export default function VesselPanel({ vessel, onClose }) {
     }
   }
 
+  const handleTabKeyDown = (e, currentIdx) => {
+    if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      const nextIdx = (currentIdx + 1) % TABS.length
+      setActiveTab(TABS[nextIdx])
+      document.getElementById(`tab-${TABS[nextIdx].toLowerCase()}`)?.focus()
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      const prevIdx = (currentIdx - 1 + TABS.length) % TABS.length
+      setActiveTab(TABS[prevIdx])
+      document.getElementById(`tab-${TABS[prevIdx].toLowerCase()}`)?.focus()
+    }
+  }
+
   if (!vessel) return null
 
   return (
