@@ -93,6 +93,9 @@ async def generate_report(
 _REPORT_ID_REGEX = re.compile(r"^[a-zA-Z0-9_\-]+$")
 
 
+REPORTS_DIR = Path(__file__).resolve().parent.parent.parent / "reports"
+
+
 @router.get(
     "/api/reports/{report_id}",
     summary="Download a generated report",
@@ -111,6 +114,7 @@ async def download_report(
 
     Raises:
         HTTPException 400: If the report ID contains invalid path characters.
+        HTTPException 403: If the report file is outside the allowed directory.
         HTTPException 404: If the report does not exist.
     """
     if not report_id or not _REPORT_ID_REGEX.match(report_id) or ".." in report_id:
@@ -128,6 +132,13 @@ async def download_report(
         )
 
     filepath = Path(report_meta["filepath"]).resolve()
+    reports_root = REPORTS_DIR.resolve()
+    if not filepath.is_relative_to(reports_root):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to requested file path",
+        )
+
     if not filepath.exists() or not filepath.is_file():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
