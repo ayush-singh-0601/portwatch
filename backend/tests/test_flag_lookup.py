@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit tests for flag_lookup utility.
 """
 
@@ -66,3 +66,15 @@ def test_get_flag_from_mmsi_unknown_mid():
 def test_get_flag_from_mmsi_invalid():
     assert get_flag_from_mmsi(None) is None
     assert get_flag_from_mmsi("12") is None
+    assert get_flag_from_mmsi("N/A") is None
+
+
+def test_get_flag_from_mmsi_formatted_strings():
+    res = get_flag_from_mmsi("MMSI-355123456")
+    assert res is not None
+    assert res["code"] == "PAN"
+
+    res_spaced = get_flag_from_mmsi(" 636 012 345 ")
+    assert res_spaced is not None
+    assert res_spaced["code"] == "LBR"
+

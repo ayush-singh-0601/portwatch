@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit tests for vessels router endpoints and search queries.
 """
 
@@ -33,3 +33,15 @@ async def test_list_vessels_pagination_validation():
         # Invalid per_page > 100
         res = await client.get("/api/vessels?per_page=500")
         assert res.status_code == 422  # validation error
+
+
+@pytest.mark.asyncio
+async def test_list_vessels_negative_filters_validation():
+    app = create_app()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.get("/api/vessels?imo=-5")
+        assert res.status_code == 422
+        res2 = await client.get("/api/vessels?mmsi=-10")
+        assert res2.status_code == 422
+

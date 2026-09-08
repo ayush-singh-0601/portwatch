@@ -154,6 +154,15 @@ class TestIsInBbox:
         assert is_in_bbox(0.0, 160.0, bbox) is False
         assert is_in_bbox(0.0, -160.0, bbox) is False
 
+    def test_invalid_bbox_inputs(self):
+        assert is_in_bbox(None, 0.0, [10, 20, 30, 40]) is False
+        assert is_in_bbox(0.0, None, [10, 20, 30, 40]) is False
+        assert is_in_bbox(0.0, 0.0, None) is False
+        assert is_in_bbox(0.0, 0.0, [10, 20, 30]) is False
+        assert is_in_bbox(0.0, 0.0, "invalid") is False
+        assert is_in_bbox(0.0, 0.0, [10, "abc", 30, 40]) is False
+
+
 
 # ---------------------------------------------------------------------------
 # calculate_bearing and destination_point

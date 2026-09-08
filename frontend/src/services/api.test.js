@@ -1,4 +1,4 @@
-﻿import { test } from 'node:test'
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { getApiErrorMessage } from './api.js'
 
@@ -24,3 +24,14 @@ test('getApiErrorMessage handles string error input', () => {
 test('getApiErrorMessage handles null or undefined error', () => {
   assert.equal(getApiErrorMessage(null), 'An unexpected error occurred')
 })
+
+test('getApiErrorMessage handles object detail', () => {
+  const err = { response: { data: { detail: { msg: 'Validation failed' } } } }
+  assert.equal(getApiErrorMessage(err), 'Validation failed')
+})
+
+test('getApiErrorMessage handles array of string details', () => {
+  const err = { response: { data: { detail: ['Invalid IMO parameter'] } } }
+  assert.equal(getApiErrorMessage(err), 'Invalid IMO parameter')
+})
+

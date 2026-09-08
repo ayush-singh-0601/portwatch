@@ -35,3 +35,17 @@ class TestReportRouterValidation:
             await download_report("")
         assert exc_info.value.status_code == 400
 
+    async def test_download_report_outside_reports_dir_rejected(self):
+        _report_store["mock_escape_id"] = {
+            "report_id": "mock_escape_id",
+            "filepath": "/etc/passwd",
+            "status": "completed",
+        }
+        try:
+            with pytest.raises(HTTPException) as exc_info:
+                await download_report("mock_escape_id")
+            assert exc_info.value.status_code == 403
+        finally:
+            _report_store.pop("mock_escape_id", None)
+
+
