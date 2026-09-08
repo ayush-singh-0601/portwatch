@@ -32,8 +32,8 @@ def _escape_like(text: str) -> str:
 )
 async def list_vessels(
     name: str | None = Query(None, description="Partial name match (case-insensitive)"),
-    imo: int | None = Query(None, description="Exact IMO number"),
-    mmsi: int | None = Query(None, description="Exact MMSI number"),
+    imo: int | None = Query(None, ge=1, description="Exact IMO number"),
+    mmsi: int | None = Query(None, ge=1, description="Exact MMSI number"),
     vessel_type: str | None = Query(None, description="Vessel type filter"),
     flag: str | None = Query(None, description="Flag state (ISO alpha-3)"),
     page: int = Query(1, ge=1, description="Page number"),
