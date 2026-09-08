@@ -391,7 +391,7 @@
                 <td>{{ match.sanctions_entry.entity_name if match.sanctions_entry else (match.matched_entity_name or match.matched_field or 'N/A') }}</td>
                 <td>{{ match.sanctions_entry.source if match.sanctions_entry else (match.sanctions_source or 'N/A') }}</td>
                 <td>{{ match.match_type }}</td>
-                <td class="mono">{{ "%.1f" | format(match.match_score) }}%</td>
+                <td class="mono">{{ "%.1f" | format(match.match_score if match.match_score is not none else 0.0) }}%</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -465,9 +465,9 @@
             {% for event in dark_events %}
             <tr>
                 <td class="mono">{{ event.start_time.strftime('%Y-%m-%d %H:%M') if event.start_time else 'N/A' }}</td>
-                <td class="mono">{{ "%.4f" | format(event.start_lat) }}°, {{ "%.4f" | format(event.start_lon) }}°</td>
+                <td class="mono">{% if event.start_lat is not none and event.start_lon is not none %}{{ "%.4f" | format(event.start_lat) }}°, {{ "%.4f" | format(event.start_lon) }}°{% else %}N/A{% endif %}</td>
                 <td class="mono">{{ event.end_time.strftime('%Y-%m-%d %H:%M') if event.end_time else 'Ongoing' }}</td>
-                <td class="mono">{{ "%.1f" | format(event.duration_hours) if event.duration_hours else '—' }}</td>
+                <td class="mono">{{ "%.1f" | format(event.duration_hours) if event.duration_hours is not none else '—' }}</td>
                 <td>{{ event.zone_type or 'Unknown' }}</td>
             </tr>
             {% endfor %}
