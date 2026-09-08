@@ -221,7 +221,14 @@ async def get_enriched_vessels(
         # primary key, so a manually triggered recalculation is always preferred
         # over an older score with a higher auto-increment id).
         risk = (
-            max(vessel.risk_scores, key=lambda x: x.calculated_at)
+            max(
+                vessel.risk_scores,
+                key=lambda x: (
+                    (x.calculated_at if (x.calculated_at and x.calculated_at.tzinfo)
+                     else (x.calculated_at.replace(tzinfo=timezone.utc) if x.calculated_at else _EPOCH)),
+                    x.id or 0,
+                ),
+            )
             if vessel.risk_scores
             else None
         )
@@ -252,12 +259,13 @@ async def get_enriched_vessels(
         sanctions = {"matched": False, "lists": []}
         for match in vessel.sanctions_matches:
             entry = match.sanctions_entry
+            score_val = float(match.match_score) if match.match_score is not None else 0.0
             sanctions["lists"].append({
                 "name": f"{entry.source} — {entry.entity_name}" if entry else "Unknown",
                 "matchType": match.match_type or "fuzzy",
-                "confidence": round(match.match_score / 100.0, 2),
+                "confidence": round(score_val / 100.0, 2),
             })
-            if match.match_score >= 85.0:
+            if score_val >= 85.0:
                 sanctions["matched"] = True
 
         # Port calls
