@@ -145,6 +145,12 @@ async def get_position_history(
     Raises:
         HTTPException 404: If the vessel does not exist.
     """
+    if start_time is not None and end_time is not None and start_time > end_time:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="start_time cannot be after end_time",
+        )
+
     # Verify vessel exists and get MMSI
     vessel_result = await db.execute(select(Vessel).where(Vessel.imo == imo))
     vessel = vessel_result.scalar_one_or_none()
