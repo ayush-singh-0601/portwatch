@@ -7,7 +7,7 @@ Implements maritime anomaly detection:
 - Loitering near sanctioned ports or ship-breaking yards for > 4 hours at low speed (< 2 knots).
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 from typing import Optional
 
@@ -84,7 +84,9 @@ class AISAnomalyDetector:
             ):
                 continue
 
-            time_diff = (pos_b.time - pos_a.time).total_seconds()
+            t_a = pos_a.time if pos_a.time.tzinfo else pos_a.time.replace(tzinfo=timezone.utc)
+            t_b = pos_b.time if pos_b.time.tzinfo else pos_b.time.replace(tzinfo=timezone.utc)
+            time_diff = (t_b - t_a).total_seconds()
             if time_diff <= 0:
                 continue
 
@@ -201,7 +203,9 @@ class AISAnomalyDetector:
             else:
                 if start_pos is not None and len(current_loitering) > 1:
                     if pos.time and start_pos.time:
-                        duration = (pos.time - start_pos.time).total_seconds() / 3600.0
+                        t_start = start_pos.time if start_pos.time.tzinfo else start_pos.time.replace(tzinfo=timezone.utc)
+                        t_pos = pos.time if pos.time.tzinfo else pos.time.replace(tzinfo=timezone.utc)
+                        duration = (t_pos - t_start).total_seconds() / 3600.0
                         if duration >= 4.0:
                             # Check if near a sanctioned port or ship breaking yard
                             is_near_risk = await self._is_near_risk_zone(
@@ -224,7 +228,9 @@ class AISAnomalyDetector:
         if start_pos is not None and len(current_loitering) > 1:
             last_pos = current_loitering[-1]
             if last_pos.time and start_pos.time:
-                duration = (last_pos.time - start_pos.time).total_seconds() / 3600.0
+                t_start = start_pos.time if start_pos.time.tzinfo else start_pos.time.replace(tzinfo=timezone.utc)
+                t_last = last_pos.time if last_pos.time.tzinfo else last_pos.time.replace(tzinfo=timezone.utc)
+                duration = (t_last - t_start).total_seconds() / 3600.0
                 if duration >= 4.0:
                     is_near_risk = await self._is_near_risk_zone(
                         start_pos.latitude, start_pos.longitude
