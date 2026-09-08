@@ -272,7 +272,7 @@ def get_flag_from_mmsi(mmsi: int | str | None) -> dict[str, str] | None:
     """
     if mmsi is None:
         return None
-    digits = str(mmsi).strip()
+    digits = "".join(c for c in str(mmsi) if c.isdigit())
     if len(digits) < 3:
         return None
     mid = digits[:3]
