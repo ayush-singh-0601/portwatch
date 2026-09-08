@@ -99,6 +99,8 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
     entities: list[SDNEntity] = []
     current_entity: SDNEntity | None = None
     current_path: list[str] = []
+    first_name: str = ""
+    last_name: str = ""
 
     logger.info("Parsing SDN XML: %s", xml_path)
 
@@ -110,6 +112,8 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
 
             if tag == "sdnEntry":
                 current_entity = SDNEntity()
+                first_name = ""
+                last_name = ""
 
         elif event == "end":
             if current_entity is not None:
@@ -119,11 +123,9 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
                 if tag == "uid":
                     current_entity.source_id = text
                 elif tag == "lastName" or tag == "sdnName":
-                    if not current_entity.entity_name:
-                        current_entity.entity_name = text
+                    last_name = text
                 elif tag == "firstName":
-                    if text and current_entity.entity_name:
-                        current_entity.entity_name = f"{text} {current_entity.entity_name}"
+                    first_name = text
                 elif tag == "sdnType":
                     sdn_type = text.lower()
                     if "vessel" in sdn_type:
@@ -188,6 +190,13 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
 
                 # End of entity
                 if tag == "sdnEntry":
+                    if first_name and last_name:
+                        current_entity.entity_name = f"{first_name} {last_name}"
+                    elif last_name:
+                        current_entity.entity_name = last_name
+                    elif first_name:
+                        current_entity.entity_name = first_name
+
                     if current_entity.entity_name:
                         entities.append(current_entity)
                     current_entity = None
