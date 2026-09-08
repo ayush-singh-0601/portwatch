@@ -35,7 +35,6 @@ api.interceptors.response.use(
   }
 )
 
-// ── Helper ────────────────────────────────────────────────────
 export function getApiErrorMessage(error) {
   if (!error) return 'An unexpected error occurred'
   if (typeof error === 'string') return error
@@ -43,7 +42,12 @@ export function getApiErrorMessage(error) {
     const detail = error.response.data.detail
     if (typeof detail === 'string') return detail
     if (Array.isArray(detail) && detail.length > 0) {
-      return detail[0].msg || JSON.stringify(detail[0])
+      const first = detail[0]
+      if (typeof first === 'string') return first
+      return first.msg || first.message || JSON.stringify(first)
+    }
+    if (typeof detail === 'object') {
+      return detail.msg || detail.message || JSON.stringify(detail)
     }
   }
   return (
