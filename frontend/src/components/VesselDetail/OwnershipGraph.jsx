@@ -12,6 +12,15 @@ import './OwnershipGraph.css'
  * Generate mock ownership graph from vessel mock data.
  */
 function buildMockGraph(vessel) {
+  const hasOwnership = vessel?.ownership && (
+    vessel.ownership.registeredOwner ||
+    vessel.ownership.beneficialOwner ||
+    vessel.ownership.operator
+  )
+  if (!hasOwnership) {
+    return { nodes: [], links: [] }
+  }
+
   const nodes = [
     {
       id: `vessel_${vessel.id}`,
@@ -20,28 +29,42 @@ function buildMockGraph(vessel) {
       isCenter: true,
       flag: vessel.flag?.code,
     },
-    {
+  ]
+  const links = []
+
+  if (vessel.ownership?.registeredOwner) {
+    nodes.push({
       id: 'entity_1',
-      label: vessel.ownership?.registeredOwner || 'Unknown Owner',
+      label: vessel.ownership.registeredOwner,
       type: 'company',
       country: vessel.flag?.code,
-    },
-    {
+    })
+    links.push({ source: 'entity_1', target: `vessel_${vessel.id}`, relationship: 'registered_owner' })
+  }
+
+  if (vessel.ownership?.beneficialOwner) {
+    nodes.push({
       id: 'entity_2',
-      label: vessel.ownership?.beneficialOwner || 'Unknown Beneficial',
-      type: vessel.ownership?.beneficialOwner?.includes('Disputed') ? 'alert' : 'company',
+      label: vessel.ownership.beneficialOwner,
+      type: vessel.ownership.beneficialOwner.includes('Disputed') ? 'alert' : 'company',
       country: 'MH',
-    },
-    {
+    })
+    const targetId = nodes.some(n => n.id === 'entity_1') ? 'entity_1' : `vessel_${vessel.id}`
+    links.push({ source: 'entity_2', target: targetId, relationship: 'beneficial_owner' })
+  }
+
+  if (vessel.ownership?.operator) {
+    nodes.push({
       id: 'entity_3',
-      label: vessel.ownership?.operator || 'Unknown Operator',
+      label: vessel.ownership.operator,
       type: 'company',
       country: 'SG',
-    },
-  ]
+    })
+    links.push({ source: 'entity_3', target: `vessel_${vessel.id}`, relationship: 'operator' })
+  }
 
   // Add a shell company layer for high-risk vessels
-  if (vessel.riskScore > 60) {
+  if (vessel.riskScore > 60 && nodes.some(n => n.id === 'entity_2')) {
     nodes.push({
       id: 'entity_4',
       label: 'Meridian Offshore Holdings',
@@ -54,15 +77,6 @@ function buildMockGraph(vessel) {
       type: 'trust',
       country: 'VG',
     })
-  }
-
-  const links = [
-    { source: 'entity_1', target: `vessel_${vessel.id}`, relationship: 'registered_owner' },
-    { source: 'entity_2', target: 'entity_1', relationship: 'beneficial_owner' },
-    { source: 'entity_3', target: `vessel_${vessel.id}`, relationship: 'operator' },
-  ]
-
-  if (vessel.riskScore > 60) {
     links.push(
       { source: 'entity_4', target: 'entity_2', relationship: 'shareholder' },
       { source: 'entity_5', target: 'entity_4', relationship: 'beneficial_owner' },
@@ -88,6 +102,10 @@ function normalizeGraphData(vessel, graphData) {
 
   // If backend API format ({ vessel_imo, nodes: [...], edges: [...] })
   if (Array.isArray(graphData.nodes) && Array.isArray(graphData.edges)) {
+    if (graphData.nodes.length === 0) {
+      return { nodes: [], links: [] }
+    }
+
     const vesselId = `vessel_${vessel.imo || vessel.id}`
     const centerNode = {
       id: vesselId,
@@ -153,6 +171,9 @@ export default function OwnershipGraph({ vessel, graphData }) {
   const containerRef = useRef(null)
   const [dimensions, setDimensions] = useState({ width: 380, height: 350 })
 
+  const data = normalizeGraphData(vessel, graphData)
+  const hasEntities = Boolean(data?.nodes?.some(n => !n.isCenter))
+
   // Resize observer
   useEffect(() => {
     const container = containerRef.current
@@ -172,9 +193,8 @@ export default function OwnershipGraph({ vessel, graphData }) {
   }, [])
 
   useEffect(() => {
-    if (!vessel) return
+    if (!vessel || !hasEntities) return
 
-    const data = normalizeGraphData(vessel, graphData)
     if (!data.nodes || data.nodes.length === 0) return
 
     // Clear stale fixed positions from any previous drag interactions
@@ -304,6 +324,36 @@ export default function OwnershipGraph({ vessel, graphData }) {
     // Cleanup
     return () => simulation.stop()
   }, [vessel, graphData, dimensions])
+
+  if (!hasEntities) {
+    return (
+      <div className="ownership-graph-container" ref={containerRef}>
+        <div className="ownership-graph-header">
+          <h4 className="ownership-graph-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+              <circle cx="12" cy="5" r="3" />
+              <circle cx="5" cy="19" r="3" />
+              <circle cx="19" cy="19" r="3" />
+              <path d="M12 8v3M8.5 16.5L10.5 13M15.5 16.5L13.5 13" />
+            </svg>
+            Ownership Network
+          </h4>
+        </div>
+        <div className="vessel-panel-section vessel-panel-history-placeholder" style={{ padding: '2.5rem 1rem' }}>
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style={{ opacity: 0.3 }}>
+            <circle cx="20" cy="20" r="16" stroke="var(--text-muted)" strokeWidth="1.5" strokeDasharray="4 3"/>
+            <path d="M15 20h10M20 15v10" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          <span className="text-muted" style={{ fontSize: '0.875rem', fontWeight: 500 }}>
+            No Corporate Records
+          </span>
+          <span className="text-muted" style={{ fontSize: '0.8125rem' }}>
+            No registered owner or corporate structure records found for this vessel.
+          </span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="ownership-graph-container" ref={containerRef}>
