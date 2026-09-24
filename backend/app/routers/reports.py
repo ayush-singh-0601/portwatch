@@ -7,6 +7,7 @@ Routes::
     GET   /api/reports/{report_id}    — download a generated report
 """
 
+import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -71,7 +72,13 @@ async def generate_report(
     # Prevent unbounded memory growth in report store
     if len(_report_store) >= _MAX_STORE_SIZE:
         oldest_key = next(iter(_report_store))
-        _report_store.pop(oldest_key, None)
+        evicted = _report_store.pop(oldest_key, None)
+        if evicted and "filepath" in evicted:
+            try:
+                if os.path.exists(evicted["filepath"]):
+                    os.remove(evicted["filepath"])
+            except OSError:
+                pass
 
     # Store report metadata for download
     _report_store[result["report_id"]] = {
