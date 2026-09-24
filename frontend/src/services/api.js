@@ -55,6 +55,11 @@ export async function getVessels(params = {}) {
   return api.get('/vessels', { params })
 }
 
+/** Fetch enriched vessels list with embedded telemetry, risk, and sanctions */
+export async function getEnrichedVessels(params = {}) {
+  return api.get('/vessels/enriched', { params })
+}
+
 /** Fetch a single vessel by IMO */
 export async function getVessel(imo) {
   return api.get(`/vessels/${cleanImo(imo)}`)
