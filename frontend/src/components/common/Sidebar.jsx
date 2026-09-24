@@ -26,23 +26,47 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
 
   const handleRiskMinChange = useCallback(
     (e) => {
-      const raw = parseInt(e.target.value, 10)
+      const val = e.target.value
+      if (val === '') {
+        onFiltersChange({ ...filters, riskMin: '' })
+        return
+      }
+      const raw = parseInt(val, 10)
       const num = isNaN(raw) ? 0 : Math.max(0, Math.min(100, raw))
-      const val = Math.min(num, filters.riskMax)
-      onFiltersChange({ ...filters, riskMin: val })
+      const maxVal = filters.riskMax === '' ? 100 : filters.riskMax
+      const clamped = Math.min(num, maxVal)
+      onFiltersChange({ ...filters, riskMin: clamped })
     },
     [filters, onFiltersChange]
   )
 
+  const handleRiskMinBlur = useCallback(() => {
+    if (filters.riskMin === '' || isNaN(Number(filters.riskMin))) {
+      onFiltersChange({ ...filters, riskMin: 0 })
+    }
+  }, [filters, onFiltersChange])
+
   const handleRiskMaxChange = useCallback(
     (e) => {
-      const raw = parseInt(e.target.value, 10)
+      const val = e.target.value
+      if (val === '') {
+        onFiltersChange({ ...filters, riskMax: '' })
+        return
+      }
+      const raw = parseInt(val, 10)
       const num = isNaN(raw) ? 100 : Math.max(0, Math.min(100, raw))
-      const val = Math.max(num, filters.riskMin)
-      onFiltersChange({ ...filters, riskMax: val })
+      const minVal = filters.riskMin === '' ? 0 : filters.riskMin
+      const clamped = Math.max(num, minVal)
+      onFiltersChange({ ...filters, riskMax: clamped })
     },
     [filters, onFiltersChange]
   )
+
+  const handleRiskMaxBlur = useCallback(() => {
+    if (filters.riskMax === '' || isNaN(Number(filters.riskMax))) {
+      onFiltersChange({ ...filters, riskMax: 100 })
+    }
+  }, [filters, onFiltersChange])
 
   const handleReset = useCallback(() => {
     onFiltersChange({
@@ -143,6 +167,7 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
                 max="100"
                 value={filters.riskMin}
                 onChange={handleRiskMinChange}
+                onBlur={handleRiskMinBlur}
               />
             </label>
             <span className="sidebar-range-dash">–</span>
@@ -154,6 +179,7 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
                 max="100"
                 value={filters.riskMax}
                 onChange={handleRiskMaxChange}
+                onBlur={handleRiskMaxBlur}
               />
             </label>
           </div>
