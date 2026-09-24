@@ -106,7 +106,24 @@ export default function VesselPanel({ vessel, onClose, onVesselUpdated }) {
     try {
       setIsScreening(true)
       setActionStatus(s => ({ ...s, screen: null }))
-      await screenSanctions(vessel.imo)
+      const res = await screenSanctions(vessel.imo)
+      const matches = Array.isArray(res?.matches) ? res.matches : []
+      const hasMatch = matches.some(m => (m.match_score ?? 0) >= 85.0)
+      const updatedSanctions = {
+        matched: hasMatch,
+        lists: matches.map(m => ({
+          name: m.sanctions_entry?.entity_name
+            ? `${m.sanctions_entry?.source || 'SANCTIONS'} — ${m.sanctions_entry.entity_name}`
+            : 'Sanctions Record',
+          matchType: m.match_type || 'fuzzy',
+          confidence: Math.round(m.match_score ?? 0) / 100,
+        })),
+      }
+      const updatedVessel = {
+        ...vessel,
+        sanctions: updatedSanctions,
+      }
+      onVesselUpdated?.(updatedVessel)
       setActionStatus(s => ({ ...s, screen: 'done' }))
       setTimeout(() => setActionStatus(s => ({ ...s, screen: null })), 3000)
     } catch (err) {
