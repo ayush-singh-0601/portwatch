@@ -84,12 +84,47 @@ def parse_eu_sanctions(xml_path: Path) -> list[dict]:
             entity_type = "organization"
 
             # Extract names
+            has_name_alias = False
+            for alias_elem in elem.iter():
+                alias_tag = re.sub(r"\{.*\}", "", alias_elem.tag)
+                if alias_tag == "nameAlias":
+                    has_name_alias = True
+                    whole = _find_text(alias_elem, "wholeName") or alias_elem.attrib.get("wholeName", "").strip()
+                    if whole:
+                        names.append(_normalize(whole))
+                    else:
+                        first = _find_text(alias_elem, "firstName") or alias_elem.attrib.get("firstName", "").strip()
+                        middle = _find_text(alias_elem, "middleName") or alias_elem.attrib.get("middleName", "").strip()
+                        last = _find_text(alias_elem, "lastName") or alias_elem.attrib.get("lastName", "").strip()
+                        combined = " ".join([p for p in [_normalize(first), _normalize(middle), _normalize(last)] if p])
+                        if combined:
+                            names.append(combined)
+
+            if not has_name_alias:
+                whole = ""
+                first = ""
+                middle = ""
+                last = ""
+                for child in elem.iter():
+                    c_tag = re.sub(r"\{.*\}", "", child.tag)
+                    if c_tag == "wholeName" and child.text:
+                        whole = _normalize(child.text)
+                    elif c_tag == "firstName" and child.text:
+                        first = _normalize(child.text)
+                    elif c_tag == "middleName" and child.text:
+                        middle = _normalize(child.text)
+                    elif c_tag == "lastName" and child.text:
+                        last = _normalize(child.text)
+                if whole:
+                    names.append(whole)
+                else:
+                    combined = " ".join([p for p in [first, middle, last] if p])
+                    if combined:
+                        names.append(combined)
+
             for name_elem in elem.iter():
                 name_tag = re.sub(r"\{.*\}", "", name_elem.tag)
-                if name_tag in ("wholeName", "lastName"):
-                    if name_elem.text:
-                        names.append(_normalize(name_elem.text))
-                elif name_tag == "subjectType":
+                if name_tag == "subjectType":
                     if name_elem.text:
                         st = name_elem.text.lower()
                         if "person" in st:
@@ -133,6 +168,9 @@ def parse_eu_sanctions(xml_path: Path) -> list[dict]:
 
     logger.info("Parsed %d EU sanctions entries", len(entries))
     return entries
+
+
+parse_eu_sanctions_xml = parse_eu_sanctions
 
 
 # ═══════════════════════════════════════════════════════════════════
