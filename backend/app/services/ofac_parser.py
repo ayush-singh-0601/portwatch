@@ -85,6 +85,45 @@ def _strip_ns(tag: str) -> str:
     return re.sub(r"\{.*\}", "", tag)
 
 
+def _extract_vessel_info(
+    id_type_or_elem, id_number_or_entity=None, entity: SDNEntity | None = None
+) -> None:
+    """Extract vessel IMO and MMSI from XML idList identification elements."""
+    if entity is None and isinstance(id_number_or_entity, SDNEntity):
+        elem = id_type_or_elem
+        entity = id_number_or_entity
+        id_type = ""
+        id_number = ""
+        for child in elem:
+            ctag = _strip_ns(child.tag)
+            if ctag == "idType":
+                id_type = normalize_text(child.text)
+            elif ctag == "idNumber":
+                id_number = normalize_text(child.text)
+    else:
+        id_type = str(id_type_or_elem or "")
+        id_number = str(id_number_or_entity or "")
+
+    if not id_type or not id_number or entity is None:
+        return
+
+    id_type_upper = id_type.strip().upper()
+    id_num_clean = id_number.strip()
+
+    if "IMO" in id_type_upper or "IMO" in id_num_clean.upper():
+        imo_match = re.search(r"\b(\d{7})\b", id_num_clean)
+        if imo_match:
+            entity.imo_number = imo_match.group(1)
+        elif id_num_clean.isdigit() and len(id_num_clean) == 7:
+            entity.imo_number = id_num_clean
+    elif "MMSI" in id_type_upper or "MMSI" in id_num_clean.upper():
+        mmsi_match = re.search(r"\b(\d{9})\b", id_num_clean)
+        if mmsi_match:
+            entity.mmsi = mmsi_match.group(1)
+        elif id_num_clean.isdigit() and len(id_num_clean) == 9:
+            entity.mmsi = id_num_clean
+
+
 def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
     """Parse the OFAC SDN Enhanced XML file into structured entities.
 
@@ -99,6 +138,8 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
     entities: list[SDNEntity] = []
     current_entity: SDNEntity | None = None
     current_path: list[str] = []
+    current_id_type: str = ""
+    current_id_number: str = ""
 
     logger.info("Parsing SDN XML: %s", xml_path)
 
@@ -110,6 +151,11 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
 
             if tag == "sdnEntry":
                 current_entity = SDNEntity()
+                current_id_type = ""
+                current_id_number = ""
+            elif tag == "id":
+                current_id_type = ""
+                current_id_number = ""
 
         elif event == "end":
             if current_entity is not None:
@@ -153,19 +199,13 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
 
                 # Vessel-specific ID documents
                 elif tag == "idType":
-                    # Store temporarily — pair with idNumber
-                    elem.set("_parsed_type", text.lower())
+                    current_id_type = text
                 elif tag == "idNumber":
-                    parent_path = "/".join(current_path[:-1])
-                    # Try to find the idType sibling
-                    id_type = ""
-                    parent = None
-                    for ancestor_tag in reversed(current_path):
-                        if ancestor_tag in ("id", "idList"):
-                            break
-                    # Check if parent element has parsed type
-                    if elem.getparent is not None:
-                        pass  # iterparse doesn't give parent easily
+                    current_id_number = text
+                elif tag == "id":
+                    _extract_vessel_info(current_id_type, current_id_number, current_entity)
+                    current_id_type = ""
+                    current_id_number = ""
 
                 # Vessel details from remarks or vessel info sections
                 elif tag == "vesselInfo":
