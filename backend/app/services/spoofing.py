@@ -7,7 +7,7 @@ Implements maritime anomaly detection:
 - Loitering near sanctioned ports or ship-breaking yards for > 4 hours at low speed (< 2 knots).
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 from typing import Optional
 
@@ -84,7 +84,14 @@ class AISAnomalyDetector:
             ):
                 continue
 
-            time_diff = (pos_b.time - pos_a.time).total_seconds()
+            time_a = pos_a.time
+            time_b = pos_b.time
+            if time_a.tzinfo is None:
+                time_a = time_a.replace(tzinfo=timezone.utc)
+            if time_b.tzinfo is None:
+                time_b = time_b.replace(tzinfo=timezone.utc)
+
+            time_diff = (time_b - time_a).total_seconds()
             if time_diff <= 0:
                 continue
 
@@ -101,8 +108,8 @@ class AISAnomalyDetector:
             if calculated_speed_knots > max_speed_knots:
                 anomalies.append({
                     "mmsi": mmsi,
-                    "time_start": pos_a.time,
-                    "time_end": pos_b.time,
+                    "time_start": time_a,
+                    "time_end": time_b,
                     "distance_km": dist_km,
                     "duration_seconds": time_diff,
                     "calculated_speed_knots": calculated_speed_knots,
