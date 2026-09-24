@@ -229,16 +229,16 @@ class AISAnomalyDetector:
                     is_near_risk = await self._is_near_risk_zone(
                         start_pos.latitude, start_pos.longitude
                     )
-                if is_near_risk:
-                    loitering_events.append({
-                        "vessel_imo": vessel_imo,
-                        "start_time": start_pos.time,
-                        "end_time": last_pos.time,
-                        "duration_hours": duration,
-                        "latitude": start_pos.latitude,
-                        "longitude": start_pos.longitude,
-                        "type": "loitering_near_risk_zone"
-                    })
+                    if is_near_risk:
+                        loitering_events.append({
+                            "vessel_imo": vessel_imo,
+                            "start_time": start_pos.time,
+                            "end_time": last_pos.time,
+                            "duration_hours": duration,
+                            "latitude": start_pos.latitude,
+                            "longitude": start_pos.longitude,
+                            "type": "loitering_near_risk_zone"
+                        })
 
         return loitering_events
 
