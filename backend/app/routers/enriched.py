@@ -26,7 +26,8 @@ from app.models.position import VesselPosition
 from app.models.risk_score import RiskScore
 from app.models.sanctions import SanctionsMatch
 from app.models.vessel import Vessel
-from app.utils.flag_lookup import get_flag_info
+from pyais.constants import COUNTRY_MAPPING
+from app.utils.flag_lookup import _FLAGS, get_flag_info
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,24 @@ def _vessel_type_normalise(raw: str | None) -> str:
         "special / tug": "other",
     }
     return mapping.get(lower, "other")
+
+
+def _resolve_flag_from_mmsi(mmsi: int | str | None) -> dict[str, str] | None:
+    """Infer flag state from the 3-digit Maritime Identification Digit (MID) of an MMSI."""
+    if not mmsi:
+        return None
+    mmsi_str = str(mmsi)
+    if len(mmsi_str) >= 3 and mmsi_str[:3].isdigit():
+        mid = int(mmsi_str[:3])
+        country = COUNTRY_MAPPING.get(mid)
+        if country:
+            info = get_flag_info(country[0])
+            if info and info.get("emoji") == "🏴":
+                for code3, data in _FLAGS.items():
+                    if data["name"].lower() == country[1].lower():
+                        return get_flag_info(code3)
+            return info
+    return None
 
 
 def _resolve_ownership_from_edges(edges: list) -> dict:
@@ -239,6 +258,8 @@ async def get_enriched_vessels(
 
         # Flag
         flag_info = get_flag_info(vessel.flag)
+        if flag_info is None and vessel.mmsi:
+            flag_info = _resolve_flag_from_mmsi(vessel.mmsi)
 
         # Ownership (default if not found)
         ownership = ownership_map.get(vessel.imo, {
@@ -315,7 +336,9 @@ async def get_enriched_vessels(
         if len(enriched) >= limit:
             break
         if mmsi not in registered_mmsis:
-            flag_info = get_flag_info(None)  # unknown flag
+            flag_info = _resolve_flag_from_mmsi(mmsi)
+            if flag_info is None:
+                flag_info = get_flag_info(None)  # unknown flag
             enriched.append({
                 "id": str(mmsi),
                 "imo": None,
