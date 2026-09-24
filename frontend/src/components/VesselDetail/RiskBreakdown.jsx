@@ -236,7 +236,14 @@ export default function RiskBreakdown({ vessel }) {
         {factors.length === 0 ? (
           <div className="risk-breakdown-empty">
             <span className="risk-breakdown-empty-icon">✓</span>
-            <span>No risk factors detected</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <span style={{ fontWeight: 600 }}>No risk factors detected</span>
+              <span className="text-muted" style={{ fontSize: '0.8125rem' }}>
+                {score === 0
+                  ? 'Vessel exhibits a clean compliance profile with zero sanctions or behavioral flags.'
+                  : 'No specific breakdown factors recorded for the assigned risk level.'}
+              </span>
+            </div>
           </div>
         ) : (
           [...factors]
@@ -279,13 +286,11 @@ export default function RiskBreakdown({ vessel }) {
       </div>
 
       {/* Audit trail footer */}
-      {factors.length > 0 && (
-        <div className="risk-breakdown-footer">
-          <span className="risk-breakdown-audit">
-            Score is deterministic and fully auditable — no ML or black-box algorithms.
-          </span>
-        </div>
-      )}
+      <div className="risk-breakdown-footer">
+        <span className="risk-breakdown-audit">
+          Score is deterministic and fully auditable — based on verified AIS telemetry and international regulatory databases.
+        </span>
+      </div>
     </div>
   )
 }
