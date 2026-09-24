@@ -148,6 +148,10 @@ class DarkVesselDetector:
             time_b = pos_b.time
             if not time_a or not time_b:
                 continue
+            if time_a.tzinfo is None:
+                time_a = time_a.replace(tzinfo=timezone.utc)
+            if time_b.tzinfo is None:
+                time_b = time_b.replace(tzinfo=timezone.utc)
             delta = time_b - time_a
 
             # Check if there is a gap
@@ -190,29 +194,33 @@ class DarkVesselDetector:
         # Check if the vessel is currently dark (i.e. last position was long ago and it's still missing)
         last_pos = positions[-1]
         now = datetime.now(timezone.utc)
-        delta_now = now - last_pos.time
-        hours_since_last = delta_now.total_seconds() / 3600.0
+        last_time = last_pos.time
+        if last_time:
+            if last_time.tzinfo is None:
+                last_time = last_time.replace(tzinfo=timezone.utc)
+            delta_now = now - last_time
+            hours_since_last = delta_now.total_seconds() / 3600.0
 
-        # Fast-path optimization: if the last position was received less than 6h ago,
-        # the vessel cannot be currently dark under any threshold.
-        if hours_since_last >= 6.0:
-            is_coastal_last = await self._is_coastal_position(last_pos.latitude, last_pos.longitude)
-            threshold_last = 6.0 if is_coastal_last else 24.0
+            # Fast-path optimization: if the last position was received less than 6h ago,
+            # the vessel cannot be currently dark under any threshold.
+            if hours_since_last >= 6.0:
+                is_coastal_last = await self._is_coastal_position(last_pos.latitude, last_pos.longitude)
+                threshold_last = 6.0 if is_coastal_last else 24.0
 
-            if hours_since_last >= threshold_last:
-                if not is_in_dead_zone(last_pos.latitude, last_pos.longitude, self.dead_zones):
-                    current_dark_event = DarkEvent(
-                        vessel_imo=vessel_imo,
-                        start_time=last_pos.time,
-                        start_lat=last_pos.latitude,
-                        start_lon=last_pos.longitude,
-                        end_time=None,  # Ongoing
-                        end_lat=None,
-                        end_lon=None,
-                        duration_hours=hours_since_last,
-                        zone_type="coastal" if is_coastal_last else "open_ocean",
-                    )
-                    dark_events.append(current_dark_event)
+                if hours_since_last >= threshold_last:
+                    if not is_in_dead_zone(last_pos.latitude, last_pos.longitude, self.dead_zones):
+                        current_dark_event = DarkEvent(
+                            vessel_imo=vessel_imo,
+                            start_time=last_time,
+                            start_lat=last_pos.latitude,
+                            start_lon=last_pos.longitude,
+                            end_time=None,  # Ongoing
+                            end_lat=None,
+                            end_lon=None,
+                            duration_hours=hours_since_last,
+                            zone_type="coastal" if is_coastal_last else "open_ocean",
+                        )
+                        dark_events.append(current_dark_event)
 
         return dark_events
 
