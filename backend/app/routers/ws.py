@@ -14,6 +14,7 @@ Send ``{"bbox": null}`` to clear the filter and receive all positions.
 
 import json
 import logging
+import math
 from dataclasses import dataclass, field
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -188,6 +189,12 @@ async def vessel_position_stream(websocket: WebSocket) -> None:
                             )
                             continue
                         bbox = [float(v) for v in bbox]
+                        min_lon, min_lat, max_lon, max_lat = bbox
+                        if not (math.isfinite(min_lat) and math.isfinite(max_lat) and math.isfinite(min_lon) and math.isfinite(max_lon)):
+                            await websocket.send_text(
+                                json.dumps({"error": "bbox coordinates must be finite numbers"})
+                            )
+                            continue
                     manager.update_bbox(websocket, bbox)
                     await websocket.send_text(
                         json.dumps({"status": "filter_updated", "bbox": bbox})
