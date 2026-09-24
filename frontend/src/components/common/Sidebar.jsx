@@ -187,8 +187,8 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
             <div
               className="sidebar-range-fill"
               style={{
-                left: `${filters.riskMin}%`,
-                width: `${filters.riskMax - filters.riskMin}%`,
+                left: `${Math.max(0, filters.riskMin)}%`,
+                width: `${Math.max(0, filters.riskMax - filters.riskMin)}%`,
               }}
             />
           </div>
