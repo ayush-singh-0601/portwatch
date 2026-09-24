@@ -115,7 +115,8 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
                   <div className="search-result-info">
                     <span className="search-result-name">{vessel.name}</span>
                     <span className="search-result-meta">
-                      {vessel.flag?.emoji} {vessel.type} · {vessel.imo}
+                      {vessel.flag?.emoji ? `${vessel.flag.emoji} ` : ''}
+                      {vessel.type || 'Vessel'} · {vessel.imo ? `IMO ${vessel.imo}` : vessel.mmsi ? `MMSI ${vessel.mmsi}` : 'No Identifier'}
                     </span>
                   </div>
                 </div>
