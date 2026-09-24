@@ -66,7 +66,8 @@ export default function useVessels() {
         active_minutes: String(ACTIVE_POSITION_MINUTES),
         include_unregistered: 'true',
       })
-      const response = await fetch(`/api/vessels/enriched?${params}`)
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+      const response = await fetch(`${apiBase.replace(/\/$/, '')}/vessels/enriched?${params}`)
       if (!response.ok) throw new Error('Backend unavailable')
       const data = await response.json()
 
