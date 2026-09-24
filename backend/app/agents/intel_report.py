@@ -91,25 +91,45 @@ class IntelReportAgent:
             raise ValueError(f"Vessel IMO {vessel_imo} not found")
 
         # ── 2. Gather ownership chain ──────────────────────────
-        ownership_entities = await self._get_ownership(vessel_imo)
+        ownership_entities = (
+            await self._get_ownership(vessel_imo)
+            if "ownership_structure" in sections
+            else []
+        )
 
         # ── 3. Gather sanctions matches ────────────────────────
-        sanctions_matches = await self._get_sanctions(vessel_imo)
+        sanctions_matches = (
+            await self._get_sanctions(vessel_imo)
+            if "sanctions_screening" in sections or "executive_summary" in sections
+            else []
+        )
 
         # ── 4. Gather risk score ───────────────────────────────
-        risk_score = await self._get_risk_score(vessel_imo)
+        risk_score = (
+            await self._get_risk_score(vessel_imo)
+            if "risk_assessment" in sections or "executive_summary" in sections
+            else None
+        )
         risk_level = self._classify_risk(risk_score.total_score if risk_score else 0)
 
         # ── 5. Gather dark events ──────────────────────────────
-        dark_events = await self._get_dark_events(vessel_imo)
+        dark_events = (
+            await self._get_dark_events(vessel_imo)
+            if "dark_activity" in sections or "executive_summary" in sections
+            else []
+        )
 
         # ── 6. Gather port calls ───────────────────────────────
-        port_calls = await self._get_port_calls(vessel_imo)
+        port_calls = (
+            await self._get_port_calls(vessel_imo)
+            if "port_history" in sections
+            else []
+        )
 
         # ── 7. Optional LLM narrative ──────────────────────────
         narrative_summary = None
         narrative_actions = None
-        if self.llm_client:
+        if self.llm_client and "executive_summary" in sections:
             narrative_summary, narrative_actions = await self._generate_narrative(
                 vessel, risk_score, sanctions_matches, dark_events
             )
