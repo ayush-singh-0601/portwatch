@@ -89,6 +89,11 @@ async def get_current_positions(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="bbox must be 4 comma-separated floats: min_lon,min_lat,max_lon,max_lat",
             )
+        if not (-90.0 <= min_lat <= 90.0 and -90.0 <= max_lat <= 90.0 and min_lat <= max_lat):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Latitude values must be between -90 and 90, and min_lat must be <= max_lat",
+            )
         if min_lon <= max_lon:
             lon_filter = VesselPosition.longitude.between(min_lon, max_lon)
         else:
