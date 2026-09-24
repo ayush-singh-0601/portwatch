@@ -83,10 +83,32 @@ def normalize_name(name: str) -> str:
     return text
 
 
+_NORMALIZED_SANCTIONS_CACHE: dict[int, tuple[int, list[str]]] = {}
+
+
+def _get_normalized_sanctions(sanctions_list: list[str]) -> list[str]:
+    """Retrieve or compute and cache normalized strings for a sanctions list."""
+    cache_key = id(sanctions_list)
+    list_len = len(sanctions_list)
+    cached = _NORMALIZED_SANCTIONS_CACHE.get(cache_key)
+    if cached is not None and cached[0] == list_len:
+        return cached[1]
+
+    normalized = [normalize_name(s) for s in sanctions_list]
+    _NORMALIZED_SANCTIONS_CACHE[cache_key] = (list_len, normalized)
+    return normalized
+
+
+def pre_normalize_sanctions(sanctions_list: list[str]) -> list[str]:
+    """Pre-normalize and cache sanctions entity names for repeated screening calls."""
+    return _get_normalized_sanctions(sanctions_list)
+
+
 def match_entity(
     name: str,
     sanctions_list: list[str],
     threshold: float = 85.0,
+    normalized_sanctions: list[str] | None = None,
 ) -> list[MatchResult]:
     """Match a single entity name against a sanctions list using fuzzy matching.
 
@@ -97,6 +119,7 @@ def match_entity(
         name: Entity name to screen.
         sanctions_list: List of sanctions entry names.
         threshold: Minimum score (0-100) to include in results.
+        normalized_sanctions: Optional pre-normalized list of sanctions names.
 
     Returns:
         List of ``MatchResult`` objects sorted by descending score.
@@ -105,7 +128,8 @@ def match_entity(
         return []
 
     normalized_input = normalize_name(name)
-    normalized_sanctions = [normalize_name(s) for s in sanctions_list]
+    if normalized_sanctions is None:
+        normalized_sanctions = _get_normalized_sanctions(sanctions_list)
 
     matches = process.extract(
         query=normalized_input,
@@ -143,6 +167,7 @@ def batch_match(
     entities: list[str],
     sanctions: list[str],
     threshold: float = 85.0,
+    normalized_sanctions: list[str] | None = None,
 ) -> dict[str, list[MatchResult]]:
     """Batch-match multiple entity names against a sanctions list.
 
@@ -153,6 +178,7 @@ def batch_match(
         entities: List of entity names to screen.
         sanctions: List of sanctions entry names.
         threshold: Minimum score to include.
+        normalized_sanctions: Optional pre-normalized list of sanctions names.
 
     Returns:
         Dictionary mapping each input entity name to its list of
@@ -162,7 +188,8 @@ def batch_match(
         return {}
 
     normalized_entities = [normalize_name(e) for e in entities]
-    normalized_sanctions = [normalize_name(s) for s in sanctions]
+    if normalized_sanctions is None:
+        normalized_sanctions = _get_normalized_sanctions(sanctions)
 
     results: dict[str, list[MatchResult]] = {}
 
@@ -194,7 +221,10 @@ def batch_match(
     except (ImportError, ModuleNotFoundError, Exception):
         for entity_name in entities:
             results[entity_name] = match_entity(
-                entity_name, sanctions, threshold=threshold
+                entity_name,
+                sanctions,
+                threshold=threshold,
+                normalized_sanctions=normalized_sanctions,
             )
 
     return results
@@ -209,28 +239,58 @@ class NameMatcher:
         results = matcher.match_entity("SEPAHAN OIL CO", sanctions_names)
     """
 
-    def __init__(self, threshold: float = 85.0):
+    def __init__(self, threshold: float = 85.0, sanctions_list: list[str] | None = None):
         self.threshold = threshold
+        self._sanctions_cache: dict[int, list[str]] = {}
+        if sanctions_list is not None:
+            self.set_sanctions(sanctions_list)
+
+    def set_sanctions(self, sanctions_list: list[str]) -> list[str]:
+        """Pre-normalize and cache a sanctions list for screening."""
+        normalized = _get_normalized_sanctions(sanctions_list)
+        self._sanctions_cache[id(sanctions_list)] = normalized
+        return normalized
 
     def match_entity(
-        self, name: str, sanctions_list: list[str]
+        self,
+        name: str,
+        sanctions_list: list[str],
+        normalized_sanctions: list[str] | None = None,
     ) -> list[MatchResult]:
         """Fuzzy-match a single name against the sanctions list."""
-        return match_entity(name, sanctions_list, threshold=self.threshold)
+        if normalized_sanctions is None:
+            normalized_sanctions = self._sanctions_cache.get(id(sanctions_list))
+        return match_entity(
+            name,
+            sanctions_list,
+            threshold=self.threshold,
+            normalized_sanctions=normalized_sanctions,
+        )
 
     def batch_match(
-        self, entities: list[str], sanctions: list[str]
+        self,
+        entities: list[str],
+        sanctions: list[str],
+        normalized_sanctions: list[str] | None = None,
     ) -> dict[str, list[MatchResult]]:
         """Batch fuzzy-match multiple entities."""
-        return batch_match(entities, sanctions, threshold=self.threshold)
+        if normalized_sanctions is None:
+            normalized_sanctions = self._sanctions_cache.get(id(sanctions))
+        return batch_match(
+            entities,
+            sanctions,
+            threshold=self.threshold,
+            normalized_sanctions=normalized_sanctions,
+        )
 
     @staticmethod
     def exact_match(name: str, sanctions_list: list[str]) -> list[str]:
         """Find exact normalized matches for a name in the sanctions list."""
         normalized_input = normalize_name(name)
+        normalized_sanctions = _get_normalized_sanctions(sanctions_list)
         matches = []
-        for s in sanctions_list:
-            if normalize_name(s) == normalized_input:
-                matches.append(s)
+        for orig, norm in zip(sanctions_list, normalized_sanctions):
+            if norm == normalized_input:
+                matches.append(orig)
         return matches
 
