@@ -475,24 +475,24 @@ export default function VesselPanel({ vessel, onClose, onVesselUpdated }) {
         <button
           className="vessel-panel-btn"
           onClick={handleRecalculateRisk}
-          disabled={isRecalculating}
-          title="Recalculate risk score using latest AIS positions and events"
+          disabled={!vessel?.imo || isRecalculating}
+          title={!vessel?.imo ? 'IMO number required for risk recalculation' : 'Recalculate risk score using latest AIS positions and events'}
         >
           {isRecalculating ? 'Scoring…' : actionStatus.recalc === 'done' ? '✓ Updated' : actionStatus.recalc === 'error' ? '✗ Failed' : 'Recalculate Risk'}
         </button>
         <button
           className="vessel-panel-btn"
           onClick={handleScreenSanctions}
-          disabled={isScreening}
-          title="Screen vessel and ownership entities against OFAC, EU, UN, and OFSI lists"
+          disabled={!vessel?.imo || isScreening}
+          title={!vessel?.imo ? 'IMO number required for sanctions screening' : 'Screen vessel and ownership entities against OFAC, EU, UN, and OFSI lists'}
         >
           {isScreening ? 'Screening…' : actionStatus.screen === 'done' ? '✓ Screened' : actionStatus.screen === 'error' ? '✗ Failed' : 'Screen Sanctions'}
         </button>
         <button
           className="vessel-panel-btn vessel-panel-btn-primary"
           onClick={handleExportReport}
-          disabled={isExporting}
-          title="Generate and download full PDF intelligence report"
+          disabled={!vessel?.imo || isExporting}
+          title={!vessel?.imo ? 'IMO number required for PDF report export' : 'Generate and download full PDF intelligence report'}
         >
           {isExporting ? 'Generating…' : actionStatus.export === 'done' ? '✓ Downloaded' : actionStatus.export === 'error' ? '✗ Failed' : 'Export Intel Report'}
         </button>
