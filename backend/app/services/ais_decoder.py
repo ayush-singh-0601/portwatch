@@ -180,9 +180,22 @@ def decode_aisstream_message(data: dict[str, Any]) -> dict[str, Any]:
             lon = None
         result["latitude"] = lat
         result["longitude"] = lon
-        result["speed"] = inner.get("Sog")
-        result["course"] = inner.get("Cog")
-        result["heading"] = inner.get("TrueHeading")
+        speed = inner.get("Sog")
+        course = inner.get("Cog")
+        heading = inner.get("TrueHeading")
+        try:
+            if speed is not None and float(speed) >= 102.2:
+                speed = None
+        except (ValueError, TypeError):
+            pass
+        try:
+            if heading is not None and float(heading) == 511.0:
+                heading = None
+        except (ValueError, TypeError):
+            pass
+        result["speed"] = speed
+        result["course"] = course
+        result["heading"] = heading
         result["nav_status"] = inner.get("NavigationalStatus")
         result["msg_type"] = inner.get("MessageID")
 
@@ -225,13 +238,24 @@ def extract_position(decoded: dict[str, Any]) -> PositionData | None:
     if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lon <= 180.0):
         return None
 
+    speed = _safe_float(decoded.get("speed") if decoded.get("speed") is not None else decoded.get("sog"))
+    course = _safe_float(decoded.get("course") if decoded.get("course") is not None else decoded.get("cog"))
+    heading = _safe_float(decoded.get("heading") if decoded.get("heading") is not None else decoded.get("true_heading"))
+
+    # In AIS standard, speed >= 102.2 kn (sentinel 102.3 kn) and heading == 511 deg
+    # represent invalid/unavailable values. Treat them as None.
+    if speed is not None and speed >= 102.2:
+        speed = None
+    if heading is not None and heading == 511.0:
+        heading = None
+
     return PositionData(
         mmsi=int(mmsi),
         latitude=float(lat),
         longitude=float(lon),
-        speed=_safe_float(decoded.get("speed") or decoded.get("sog")),
-        course=_safe_float(decoded.get("course") or decoded.get("cog")),
-        heading=_safe_float(decoded.get("heading") or decoded.get("true_heading")),
+        speed=speed,
+        course=course,
+        heading=heading,
         nav_status=_safe_int(decoded.get("nav_status") or decoded.get("status")),
         msg_type=_safe_int(decoded.get("msg_type")),
         timestamp=decoded.get("time_utc"),
