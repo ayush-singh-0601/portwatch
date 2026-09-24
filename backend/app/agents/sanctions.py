@@ -80,14 +80,16 @@ class SanctionsScreeningAgent:
         # ── Stage 1: Exact IMO match ─────────────────────────────
         imo_str = str(vessel.imo)
         for entry in sanctions:
-            if entry.imo_number and str(entry.imo_number).strip() == imo_str:
-                all_matches.append(self._make_match(
-                    entry=entry,
-                    score=100.0,
-                    match_type="exact_imo",
-                    matched_field="imo_number",
-                    matched_name=vessel.name,
-                ))
+            if entry.imo_number:
+                cleaned_imo = "".join(c for c in str(entry.imo_number) if c.isdigit())
+                if cleaned_imo and cleaned_imo == imo_str:
+                    all_matches.append(self._make_match(
+                        entry=entry,
+                        score=100.0,
+                        match_type="exact_imo",
+                        matched_field="imo_number",
+                        matched_name=vessel.name,
+                    ))
 
         # ── Stage 2: Exact name match ────────────────────────────
         sanctions_names = [e.entity_name for e in sanctions]
