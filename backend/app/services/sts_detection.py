@@ -105,6 +105,11 @@ class STSTransferDetector:
                 if not vessel_a_imo or not vessel_b_imo:
                     continue
 
+                if start_time and start_time.tzinfo is None:
+                    start_time = start_time.replace(tzinfo=timezone.utc)
+                if end_time and end_time.tzinfo is None:
+                    end_time = end_time.replace(tzinfo=timezone.utc)
+
                 duration = (end_time - start_time).total_seconds() / 60.0
 
                 # Check if this occurred within port limits
