@@ -222,7 +222,11 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
                 elif tag == "remarks":
                     current_entity.remarks = text
                     # Extract IMO from remarks if present
-                    imo_match = re.search(r"IMO\s*(\d{7})", text, re.IGNORECASE)
+                    imo_match = re.search(
+                        r"\bIMO(?:\s*(?:no\.?|number|[:.]|#))?\s*[:.]?\s*(\d{7})\b",
+                        text,
+                        re.IGNORECASE,
+                    )
                     if imo_match:
                         current_entity.imo_number = imo_match.group(1)
 
