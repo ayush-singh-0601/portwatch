@@ -113,7 +113,7 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
             className="sidebar-preset-btn"
             onClick={() =>
               onFiltersChange({
-                types: ['cargo', 'tanker', 'fishing', 'passenger', 'other'],
+                ...filters,
                 riskMin: 50,
                 riskMax: 100,
               })
