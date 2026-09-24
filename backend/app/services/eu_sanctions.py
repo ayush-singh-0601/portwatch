@@ -169,7 +169,8 @@ def parse_un_sanctions(xml_path: Path) -> list[dict]:
             first = _find_text(elem, "FIRST_NAME")
             second = _find_text(elem, "SECOND_NAME")
             third = _find_text(elem, "THIRD_NAME")
-            name_parts = [p for p in [first, second, third] if p]
+            fourth = _find_text(elem, "FOURTH_NAME")
+            name_parts = [p for p in [first, second, third, fourth] if p]
             primary_name = " ".join(name_parts)
 
             # Aliases
@@ -200,6 +201,9 @@ def parse_un_sanctions(xml_path: Path) -> list[dict]:
 
     logger.info("Parsed %d UN sanctions entries", len(entries))
     return entries
+
+
+parse_un_sanctions_xml = parse_un_sanctions
 
 
 # ═══════════════════════════════════════════════════════════════════
