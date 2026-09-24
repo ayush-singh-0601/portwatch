@@ -33,9 +33,9 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
     }
   }, [query, onSearch])
 
-  // Reset active index and clear searching when results change
+  // Keep active index within valid bounds and clear searching when results change
   useEffect(() => {
-    setActiveIndex(0)
+    setActiveIndex((prev) => (results.length > 0 ? Math.min(Math.max(0, prev), results.length - 1) : 0))
     setIsSearching(false)
   }, [results])
 
