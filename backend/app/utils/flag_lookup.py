@@ -205,6 +205,20 @@ _FLAGS: dict[str, dict[str, str]] = {
     "ZWE": {"name": "Zimbabwe", "emoji": "🇿🇼"},
 }
 
+# Populate ISO 3166-1 alpha-2 two-letter country codes derived from flag emojis
+_ALPHA2_FLAGS: dict[str, dict[str, str]] = {}
+for _code, _info in list(_FLAGS.items()):
+    _emoji = _info.get("emoji", "")
+    if len(_emoji) == 2:
+        _c1, _c2 = ord(_emoji[0]), ord(_emoji[1])
+        if 0x1F1E6 <= _c1 <= 0x1F1FF and 0x1F1E6 <= _c2 <= 0x1F1FF:
+            _a2 = chr(_c1 - 0x1F1E6 + ord("A")) + chr(_c2 - 0x1F1E6 + ord("A"))
+            _ALPHA2_FLAGS[_a2] = _info
+
+_FLAGS.update(_ALPHA2_FLAGS)
+if "GB" in _FLAGS and "UK" not in _FLAGS:
+    _FLAGS["UK"] = _FLAGS["GB"]
+
 
 def get_flag_info(code: str | None) -> dict[str, str] | None:
     """Return ``{"code": ..., "name": ..., "emoji": ...}`` for a flag code.
