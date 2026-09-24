@@ -72,6 +72,32 @@ async def list_vessels(
 
 
 @router.get(
+    "/mmsi/{mmsi}",
+    response_model=VesselResponse,
+    summary="Get vessel by MMSI number",
+)
+async def get_vessel_by_mmsi(
+    mmsi: int,
+    db: AsyncSession = Depends(get_db),
+) -> VesselResponse:
+    """Retrieve a single vessel by its MMSI number when IMO is unknown.
+
+    Raises:
+        HTTPException 404: If no vessel with the given MMSI exists.
+    """
+    result = await db.execute(select(Vessel).where(Vessel.mmsi == mmsi))
+    vessel = result.scalars().first()
+
+    if vessel is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Vessel with MMSI {mmsi} not found",
+        )
+
+    return VesselResponse.model_validate(vessel)
+
+
+@router.get(
     "/{imo}",
     response_model=VesselResponse,
     summary="Get vessel by IMO number",
