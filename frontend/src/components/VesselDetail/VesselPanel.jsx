@@ -243,6 +243,7 @@ export default function VesselPanel({ vessel, onClose, onVesselUpdated }) {
             role="tabpanel"
             id="tabpanel-overview"
             aria-labelledby="tab-overview"
+            tabIndex={0}
           >
             <IdentityCard vessel={vessel} />
 
@@ -337,6 +338,7 @@ export default function VesselPanel({ vessel, onClose, onVesselUpdated }) {
             role="tabpanel"
             id="tabpanel-ownership"
             aria-labelledby="tab-ownership"
+            tabIndex={0}
           >
             <div className="vessel-panel-section">
               <h4 className="vessel-panel-section-title">Corporate Structure</h4>
@@ -392,6 +394,7 @@ export default function VesselPanel({ vessel, onClose, onVesselUpdated }) {
             role="tabpanel"
             id="tabpanel-sanctions"
             aria-labelledby="tab-sanctions"
+            tabIndex={0}
           >
             {vessel.sanctions?.matched ? (
               <div className="vessel-panel-section">
@@ -443,6 +446,7 @@ export default function VesselPanel({ vessel, onClose, onVesselUpdated }) {
             role="tabpanel"
             id="tabpanel-history"
             aria-labelledby="tab-history"
+            tabIndex={0}
           >
             {vessel.portCalls && vessel.portCalls.length > 0 ? (
               <div className="vessel-panel-section">
