@@ -166,8 +166,20 @@ def decode_aisstream_message(data: dict[str, Any]) -> dict[str, Any]:
 
     if msg_type in ("PositionReport", "StandardClassBPositionReport", "ExtendedClassBPositionReport"):
         result["msg_type_str"] = msg_type
-        result["latitude"] = inner.get("Latitude")
-        result["longitude"] = inner.get("Longitude")
+        lat = inner.get("Latitude")
+        lon = inner.get("Longitude")
+        try:
+            if lat is not None and not (-90.0 <= float(lat) <= 90.0):
+                lat = None
+        except (ValueError, TypeError):
+            lat = None
+        try:
+            if lon is not None and not (-180.0 <= float(lon) <= 180.0):
+                lon = None
+        except (ValueError, TypeError):
+            lon = None
+        result["latitude"] = lat
+        result["longitude"] = lon
         result["speed"] = inner.get("Sog")
         result["course"] = inner.get("Cog")
         result["heading"] = inner.get("TrueHeading")
@@ -199,14 +211,18 @@ def extract_position(decoded: dict[str, Any]) -> PositionData | None:
         A ``PositionData`` instance or ``None``.
     """
     mmsi = decoded.get("mmsi")
-    lat = decoded.get("latitude") or decoded.get("lat")
-    lon = decoded.get("longitude") or decoded.get("lon")
+    raw_lat = decoded.get("latitude") if decoded.get("latitude") is not None else decoded.get("lat")
+    raw_lon = decoded.get("longitude") if decoded.get("longitude") is not None else decoded.get("lon")
+
+    lat = _safe_float(raw_lat)
+    lon = _safe_float(raw_lon)
 
     if mmsi is None or lat is None or lon is None:
         return None
 
-    # Discard invalid coordinates (AIS default for "not available")
-    if lat == 91.0 or lon == 181.0:
+    # Validate coordinates within strict physical ranges [-90, 90] and [-180, 180]
+    # Discards invalid coordinates (including AIS defaults 91.0 / 181.0 for "not available")
+    if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lon <= 180.0):
         return None
 
     return PositionData(
