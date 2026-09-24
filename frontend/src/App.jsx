@@ -118,6 +118,7 @@ export default function App() {
         <VesselPanel
           vessel={selectedVessel}
           onClose={clearSelection}
+          onVesselUpdated={selectVessel}
         />
       )}
 

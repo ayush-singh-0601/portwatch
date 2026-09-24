@@ -9,7 +9,7 @@ import './VesselPanel.css'
 
 const TABS = ['Overview', 'Ownership', 'Sanctions', 'History']
 
-export default function VesselPanel({ vessel, onClose }) {
+export default function VesselPanel({ vessel, onClose, onVesselUpdated }) {
   const [activeTab, setActiveTab] = useState('Overview')
   const [isRecalculating, setIsRecalculating] = useState(false)
   const [isScreening, setIsScreening] = useState(false)
@@ -83,7 +83,13 @@ export default function VesselPanel({ vessel, onClose }) {
     try {
       setIsRecalculating(true)
       setActionStatus(s => ({ ...s, recalc: null }))
-      await calculateRisk(vessel.imo)
+      const res = await calculateRisk(vessel.imo)
+      const updatedVessel = {
+        ...vessel,
+        riskScore: res?.total_score ?? vessel.riskScore,
+        riskFactors: Array.isArray(res?.factors) ? res.factors : vessel.riskFactors,
+      }
+      onVesselUpdated?.(updatedVessel)
       setActionStatus(s => ({ ...s, recalc: 'done' }))
       setTimeout(() => setActionStatus(s => ({ ...s, recalc: null })), 3000)
     } catch (err) {
