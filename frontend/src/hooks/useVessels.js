@@ -52,6 +52,11 @@ export default function useVessels() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const searchTimerRef = useRef(null)
+  const selectedVesselIdRef = useRef(null)
+
+  useEffect(() => {
+    selectedVesselIdRef.current = selectedVessel?.id ?? null
+  }, [selectedVessel])
 
   // WebSocket for live position updates
   const { positions: livePositions, isConnected: wsConnected } = useWebSocket()
@@ -111,7 +116,7 @@ export default function useVessels() {
 
         if (idx !== undefined) {
           // Update existing vessel — only replace if values actually differ
-          next[idx] = {
+          const updatedVessel = {
             ...next[idx],
             position: {
               lat: Number(update.lat),
@@ -121,7 +126,16 @@ export default function useVessels() {
             speed: update.speed ?? next[idx].speed,
             lastSeen: update.timestamp || new Date().toISOString(),
           }
+          next[idx] = updatedVessel
           changed = true
+
+          if (
+            selectedVesselIdRef.current &&
+            (updatedVessel.id === selectedVesselIdRef.current ||
+             updatedVessel.mmsi === selectedVesselIdRef.current)
+          ) {
+            setSelectedVessel(updatedVessel)
+          }
         } else {
           // It's a new vessel not currently in the state! Synthesize it
           const mmsiVal = isNaN(Number(key)) ? null : String(key)
@@ -154,6 +168,14 @@ export default function useVessels() {
             next.push(newVessel)
             byMmsi.set(mmsiVal, next.length - 1)
             changed = true
+
+            if (
+              selectedVesselIdRef.current &&
+              (newVessel.id === selectedVesselIdRef.current ||
+               newVessel.mmsi === selectedVesselIdRef.current)
+            ) {
+              setSelectedVessel(newVessel)
+            }
           }
         }
       })
@@ -209,15 +231,18 @@ export default function useVessels() {
   const selectVessel = useCallback(
     (vesselOrId) => {
       if (!vesselOrId) {
+        selectedVesselIdRef.current = null
         setSelectedVessel(null)
         return
       }
       if (typeof vesselOrId === 'object') {
+        selectedVesselIdRef.current = vesselOrId.id ?? null
         setSelectedVessel(vesselOrId)
       } else {
         const found = vessels.find(
           (v) => v.id === vesselOrId || v.imo === String(vesselOrId)
         )
+        selectedVesselIdRef.current = found?.id ?? null
         setSelectedVessel(found || null)
       }
     },
@@ -226,6 +251,7 @@ export default function useVessels() {
 
   // ── Clear selection ────────────────────────────────────────
   const clearSelection = useCallback(() => {
+    selectedVesselIdRef.current = null
     setSelectedVessel(null)
   }, [])
 
@@ -233,19 +259,6 @@ export default function useVessels() {
   useEffect(() => {
     fetchVessels()
   }, [fetchVessels])
-
-  // ── Keep selectedVessel in sync with live position updates ──
-  // When a WebSocket position arrives, `vessels` is updated in-place.
-  // Without this effect the detail panel keeps showing the stale
-  // heading/speed/position from the moment the vessel was clicked.
-  useEffect(() => {
-    if (!selectedVessel) return
-    const updated = vessels.find((v) => v.id === selectedVessel.id)
-    if (updated && updated !== selectedVessel) {
-      setSelectedVessel(updated)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vessels])
 
   // Cleanup
   useEffect(() => {
