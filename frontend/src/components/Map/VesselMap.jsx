@@ -105,11 +105,32 @@ function MapViewportTracker({ onViewportChange }) {
   return null
 }
 
+function MapSelectionFlyer({ selectedVessel }) {
+  const map = useMapEvents({})
+  useEffect(() => {
+    if (!selectedVessel || !isValidPosition(selectedVessel)) return
+    const lat = Number(selectedVessel.position.lat)
+    const lon = Number(selectedVessel.position.lon)
+    const center = map.getCenter()
+    const distLat = Math.abs(center.lat - lat)
+    const distLon = Math.abs(center.lng - lon)
+    if (distLat > 0.001 || distLon > 0.001) {
+      map.flyTo([lat, lon], Math.max(map.getZoom(), 6), {
+        duration: 0.8,
+      })
+    }
+  }, [map, selectedVessel?.id, selectedVessel?.position?.lat, selectedVessel?.position?.lon])
+
+  return null
+}
+
 function VesselMarkerLayer({ vessels, selectedVessel, onVesselClick, viewport }) {
   const renderedVessels = useMemo(() => {
     const selectedId = selectedVessel?.id
     const candidates = vessels.filter(
-      (vessel) => isValidPosition(vessel) && isInsideViewport(vessel, viewport)
+      (vessel) =>
+        isValidPosition(vessel) &&
+        (isInsideViewport(vessel, viewport) || vessel.id === selectedId)
     )
     const limit = markerLimitForZoom(viewport?.zoom)
 
@@ -166,6 +187,7 @@ export default function VesselMap({ vessels = [], selectedVessel, onVesselClick 
 
       <MapResizeHandler />
       <MapViewportTracker onViewportChange={setViewport} />
+      <MapSelectionFlyer selectedVessel={selectedVessel} />
       <VesselMarkerLayer
         vessels={vessels}
         selectedVessel={selectedVessel}
