@@ -117,7 +117,7 @@ function VesselMarker({ vessel, isSelected, onClick }) {
             <span>{Number.isFinite(speed) ? speed.toFixed(1) : '0.0'} kn</span>
             <span>{Number.isFinite(heading) ? Math.round(heading) : 0} deg</span>
           </div>
-          {vessel.riskScore > 60 && (
+          {Number.isFinite(vessel.riskScore) && vessel.riskScore >= 25 && (
             <div style={{
               display: 'flex',
               alignItems: 'center',
