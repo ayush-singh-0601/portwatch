@@ -55,11 +55,13 @@ async def get_ownership_graph(
     )
     edges = list(edges_result.scalars().all())
 
-    # Collect all entity IDs from the edges
+    # Collect all entity IDs from the edges (filtering out None)
     entity_ids: set[int] = set()
     for edge in edges:
-        entity_ids.add(edge.source_entity_id)
-        entity_ids.add(edge.target_entity_id)
+        if edge.source_entity_id is not None:
+            entity_ids.add(edge.source_entity_id)
+        if edge.target_entity_id is not None:
+            entity_ids.add(edge.target_entity_id)
 
     # Also include edges between the discovered entities (multi-hop chains)
     if entity_ids:
@@ -79,10 +81,13 @@ async def get_ownership_graph(
             if ce.id not in edge_ids:
                 edges.append(ce)
                 edge_ids.add(ce.id)
-                entity_ids.add(ce.source_entity_id)
-                entity_ids.add(ce.target_entity_id)
+                if ce.source_entity_id is not None:
+                    entity_ids.add(ce.source_entity_id)
+                if ce.target_entity_id is not None:
+                    entity_ids.add(ce.target_entity_id)
 
     # Fetch all related entities
+    entity_ids.discard(None)
     nodes: list[OwnershipEntityResponse] = []
     if entity_ids:
         entities_result = await db.execute(
