@@ -41,10 +41,12 @@ logger = logging.getLogger(__name__)
 
 # Flag-of-convenience registries (ITF list + Paris MoU grey/black list)
 FLAG_OF_CONVENIENCE = {
-    "ATG", "BHS", "BRB", "BLZ", "BMU", "BOL", "KHM", "CYM", "COM",
-    "CYP", "GNQ", "GEO", "GIB", "HND", "JAM", "LBN", "LBR", "MLT",
-    "MHL", "MUS", "MDA", "MNG", "MMR", "PAN", "STP", "VCT", "LKA",
-    "TON", "VUT",
+    "AG", "ATG", "BB", "BRB", "BLZ", "BZ", "BM", "BMU", "BO", "BOL",
+    "BS", "BHS", "COM", "KM", "CY", "CYP", "CYM", "KY", "GEO", "GE",
+    "GIB", "GI", "GNQ", "GQ", "HND", "HN", "JAM", "JM", "KH", "KHM",
+    "LBN", "LB", "LBR", "LR", "LK", "LKA", "MDA", "MD", "MH", "MHL",
+    "MLT", "MT", "MM", "MMR", "MN", "MNG", "MU", "MUS", "PA", "PAN",
+    "ST", "STP", "TO", "TON", "VC", "VCT", "VU", "VUT",
 }
 
 # IMO high-risk flag states (Paris MoU black list 2023-2024)
