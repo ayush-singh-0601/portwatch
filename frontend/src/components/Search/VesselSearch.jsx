@@ -15,6 +15,8 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
   const inputRef = useRef(null)
   const listRef = useRef(null)
 
+  const modalRef = useRef(null)
+
   // Auto-focus input on mount
   useEffect(() => {
     inputRef.current?.focus()
@@ -54,6 +56,24 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
         if (selected) onSelect(selected)
       } else if (e.key === 'Escape') {
         onClose()
+      } else if (e.key === 'Tab') {
+        const modal = modalRef.current
+        if (!modal) return
+        const focusables = modal.querySelectorAll('input, button, [tabindex="0"]')
+        if (focusables.length <= 1) {
+          e.preventDefault()
+          inputRef.current?.focus()
+          return
+        }
+        const first = focusables[0]
+        const last = focusables[focusables.length - 1]
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault()
+          first.focus()
+        }
       }
     },
     [results, activeIndex, onSelect, onClose]
@@ -68,7 +88,9 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
   return (
     <div className="search-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Search vessels">
       <div
+        ref={modalRef}
         className="search-modal glass-panel"
+        onKeyDown={handleKeyDown}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
