@@ -77,7 +77,13 @@ function normalizeGraphData(vessel, graphData) {
 
   // If already in D3 format ({ nodes: [...], links: [...] })
   if (Array.isArray(graphData.nodes) && Array.isArray(graphData.links)) {
-    return graphData
+    const nodeIds = new Set(graphData.nodes.map(n => n.id))
+    const links = graphData.links.filter(l => {
+      const s = typeof l.source === 'object' ? l.source?.id : l.source
+      const t = typeof l.target === 'object' ? l.target?.id : l.target
+      return nodeIds.has(s) && nodeIds.has(t)
+    })
+    return { nodes: graphData.nodes, links }
   }
 
   // If backend API format ({ vessel_imo, nodes: [...], edges: [...] })
@@ -99,12 +105,15 @@ function normalizeGraphData(vessel, graphData) {
     }))
 
     const nodes = [centerNode, ...entityNodes]
+    const nodeIds = new Set(nodes.map(n => n.id))
 
-    const links = graphData.edges.map(e => ({
-      source: `entity_${e.source_entity_id}`,
-      target: e.vessel_imo ? vesselId : `entity_${e.target_entity_id}`,
-      relationship: e.relationship_type || 'owner',
-    }))
+    const links = graphData.edges
+      .map(e => ({
+        source: `entity_${e.source_entity_id}`,
+        target: e.vessel_imo ? vesselId : `entity_${e.target_entity_id}`,
+        relationship: e.relationship_type || 'owner',
+      }))
+      .filter(l => nodeIds.has(l.source) && nodeIds.has(l.target))
 
     // If no links connected to vessel directly and we have entity nodes, link the first
     if (entityNodes.length > 0 && !links.some(l => l.target === vesselId || l.source === vesselId)) {
