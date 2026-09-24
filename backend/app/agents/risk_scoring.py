@@ -49,10 +49,12 @@ FLAG_OF_CONVENIENCE = {
     "ST", "STP", "TO", "TON", "VC", "VCT", "VU", "VUT",
 }
 
-# IMO high-risk flag states (Paris MoU black list 2023-2024)
+# IMO high-risk flag states (Paris MoU black list 2023-2024 + sanctioned flag states)
 HIGH_RISK_FLAG_STATES = {
-    "CMR", "TGO", "TZA", "PLW", "COM", "GNQ", "BOL", "MDG",
-    "SLE", "VUT", "ALB", "GNB",
+    "AL", "ALB", "BO", "BOL", "CM", "CMR", "COM", "CU", "CUB", "KM",
+    "GNB", "GNQ", "GQ", "GW", "IR", "IRN", "KP", "PRK", "MDG", "MG",
+    "PLW", "PW", "RU", "RUS", "SL", "SLE", "SY", "SYR", "TG", "TGO",
+    "TZ", "TZA", "VE", "VEN", "VU", "VUT",
 }
 
 # Known sanctioned port countries (OFAC heavily sanctioned jurisdictions)
