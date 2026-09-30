@@ -3,6 +3,9 @@ import assert from 'node:assert/strict'
 import { getRiskColor, getRiskLabel, getRiskLabelShort } from './riskColors.js'
 import { getVesselColor, getVesselLabel } from './vesselTypes.js'
 import { getEnrichedVessels } from '../services/api.js'
+import { parseTimestamp, formatLastSeen, formatEta, formatPortDate } from './formatters.js'
+import { isInsideViewport, roundedHeading, riskBand } from './mapUtils.js'
+import { buildMockGraph, normalizeGraphData } from './ownershipUtils.js'
 
 test('getEnrichedVessels is exported and callable as an API function', () => {
   assert.equal(typeof getEnrichedVessels, 'function')
@@ -17,6 +20,14 @@ test('risk threshold classification marks score >= 25 as elevated risk', () => {
 
   assert.equal(getRiskLabel(75), 'HIGH RISK')
   assert.equal(getRiskLabelShort(90), 'HIGH')
+  assert.ok(getRiskColor(85).length > 0)
+})
+
+test('vessel type colors and labels are correctly mapped', () => {
+  assert.equal(getVesselLabel('cargo'), 'Cargo')
+  assert.equal(getVesselLabel('tanker'), 'Tanker')
+  assert.ok(getVesselColor('cargo').startsWith('hsl'))
+  assert.ok(getVesselColor('unknown').length > 0)
 })
 
 test('dual range slider bar clamp math prevents negative percentage widths', () => {
@@ -29,26 +40,95 @@ test('dual range slider bar clamp math prevents negative percentage widths', () 
   assert.equal(widthPct, 0)
 })
 
-test('timestamp formatting handles epoch seconds (<1e11) vs milliseconds (>1e11)', () => {
-  const formatEpoch = (val) => {
-    if (!val) return '—'
-    const ms = typeof val === 'number' ? (val < 1e11 ? val * 1000 : val) : Date.parse(val)
-    if (!Number.isFinite(ms) || Number.isNaN(ms)) return '—'
-    const date = new Date(ms)
-    return Number.isNaN(date.getTime()) ? '—' : date.toISOString()
+test('formatters parse timestamps and format relative and calendar dates', () => {
+  // Epoch seconds vs milliseconds
+  assert.equal(parseTimestamp(1700000000), 1700000000000)
+  assert.equal(parseTimestamp(1700000000000), 1700000000000)
+  assert.equal(parseTimestamp('invalid'), null)
+  assert.equal(parseTimestamp(null), null)
+
+  // formatLastSeen
+  const recent = Date.now() - 5000
+  assert.equal(formatLastSeen(recent), 'Just now')
+  const hoursAgo = Date.now() - 7200000
+  assert.equal(formatLastSeen(hoursAgo), '2h ago')
+  assert.equal(formatLastSeen(null), '—')
+
+  // formatEta
+  assert.equal(formatEta(null), '—')
+  assert.ok(formatEta(1700000000000) !== '—')
+
+  // formatPortDate
+  assert.equal(formatPortDate(null), '—')
+  assert.ok(formatPortDate('2026-09-20T10:00:00Z').includes('2026'))
+})
+
+test('mapUtils calculates normalized heading and risk bands', () => {
+  // Negative heading wraps to positive modulo 360
+  assert.equal(roundedHeading(-10), 350)
+  assert.equal(roundedHeading(356), 0)
+  assert.equal(roundedHeading(184), 180)
+  assert.equal(roundedHeading('invalid'), 0)
+
+  // Risk bands
+  assert.equal(riskBand(80), 'critical')
+  assert.equal(riskBand(60), 'high')
+  assert.equal(riskBand(30), 'medium')
+  assert.equal(riskBand(10), 'low')
+})
+
+test('mapUtils isInsideViewport handles antimeridian and world copy wrapping', () => {
+  const vessel = { position: { lat: 25.0, lon: 175.0 } }
+
+  // Normal viewport
+  assert.equal(isInsideViewport(vessel, { south: 20, north: 30, west: 170, east: 180 }), true)
+  assert.equal(isInsideViewport(vessel, { south: 20, north: 30, west: 0, east: 50 }), false)
+
+  // Whole world zoom (span >= 360)
+  assert.equal(isInsideViewport(vessel, { south: -80, north: 80, west: -200, east: 200 }), true)
+
+  // Antimeridian crossing (west = 170, east = 190 in continuous Leaflet coordinates)
+  const vesselNearDateLineWest = { position: { lat: 25.0, lon: -175.0 } }
+  assert.equal(isInsideViewport(vesselNearDateLineWest, { south: 20, north: 30, west: 170, east: 190 }), true)
+
+  // Wrapped bounds (west = 170, east = -170)
+  assert.equal(isInsideViewport(vesselNearDateLineWest, { south: 20, north: 30, west: 170, east: -170 }), true)
+})
+
+test('ownershipUtils generates mock graph and normalizes API graph with deep copy', () => {
+  const vessel = {
+    id: 1,
+    name: 'Ocean Pioneer',
+    imo: '9123456',
+    flag: { code: 'PA' },
+    ownership: {
+      registeredOwner: 'Pacific Maritime Ltd',
+      beneficialOwner: 'Alpha Holdings',
+    },
   }
 
-  // 1700000000 is seconds (2023-11-14T22:13:20.000Z)
-  const secondsIso = formatEpoch(1700000000)
-  assert.ok(secondsIso.startsWith('2023-11-14'))
+  const mock = buildMockGraph(vessel)
+  assert.ok(mock.nodes.length >= 2)
+  assert.ok(mock.links.length >= 1)
 
-  // 1700000000000 is milliseconds
-  const msIso = formatEpoch(1700000000000)
-  assert.ok(msIso.startsWith('2023-11-14'))
+  // API format normalization with object-based link references
+  const rawApiGraph = {
+    nodes: [
+      { id: 101, name: 'Parent Corp', entity_type: 'company', country: 'SG' },
+      { id: 102, name: 'Holding Ltd', entity_type: 'shell', country: 'PA' },
+    ],
+    edges: [
+      { source_entity_id: 101, target_entity_id: 102, relationship_type: 'subsidiary' },
+    ],
+  }
 
-  // Invalid date
-  assert.equal(formatEpoch('invalid-date'), '—')
-  assert.equal(formatEpoch(null), '—')
+  const normalized = normalizeGraphData(vessel, rawApiGraph)
+  assert.equal(normalized.nodes.length, 3) // Center vessel + 2 entities
+  assert.ok(normalized.links.length >= 1)
+
+  // Mutations to normalized nodes/links do not affect input rawApiGraph
+  normalized.nodes[0].x = 100
+  assert.equal(rawApiGraph.nodes[0].x, undefined)
 })
 
 test('vessel metadata fallback provides clean identifier when IMO is missing', () => {

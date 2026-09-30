@@ -167,3 +167,58 @@ def test_datetime_utc_normalization():
     aware_dt = naive_dt.replace(tzinfo=timezone.utc) if naive_dt.tzinfo is None else naive_dt
     delta = now_utc - aware_dt
     assert delta.total_seconds() > 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8. AIS Decoder: NaN & Inf Float Sanitization
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_ais_decoder_nan_inf_rejection():
+    from app.services.ais_decoder import _safe_float
+    assert _safe_float(float("nan")) is None
+    assert _safe_float(float("inf")) is None
+    assert _safe_float(float("-inf")) is None
+    assert _safe_float(42.5) == 42.5
+    assert _safe_float("invalid") is None
+
+    # extract_position rejects NaN coordinates
+    nan_msg = {"mmsi": 123456789, "latitude": float("nan"), "longitude": 10.0}
+    assert extract_position(nan_msg) is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 9. Flag Lookup: Whitespace Sanitization
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_flag_lookup_whitespace_sanitization():
+    assert get_flag_info("   ") is None
+    assert get_flag_info("") is None
+    assert get_flag_info(None) is None
+    # Valid code with whitespace is stripped cleanly
+    info = get_flag_info(" PA ")
+    assert info is not None
+    assert info["code"] == "PA"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 10. Positions Router: Physical Longitude Bounds [-180, 180]
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_positions_router_longitude_physical_bounds():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Invalid min_lon < -180 (-185.0)
+        resp = await client.get("/api/map/positions", params={"bbox": "-185.0,20.0,50.0,30.0"})
+        assert resp.status_code == 400
+        assert "between -180 and 180" in resp.json()["detail"]
+
+        # Invalid max_lon > 180 (185.0)
+        resp2 = await client.get("/api/map/positions", params={"bbox": "50.0,20.0,185.0,30.0"})
+        assert resp2.status_code == 400
+        assert "between -180 and 180" in resp2.json()["detail"]
+
+        # NaN coordinate string
+        resp3 = await client.get("/api/map/positions", params={"bbox": "nan,20.0,50.0,30.0"})
+        assert resp3.status_code == 400
+

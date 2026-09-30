@@ -5,7 +5,7 @@ import IdentityCard from './IdentityCard'
 import OwnershipGraph from './OwnershipGraph'
 import { calculateRisk, generateReport, getOwnership, screenSanctions } from '../../services/api'
 import { getVesselBadgeClass, getVesselLabel } from '../../utils/vesselTypes'
-import { parseTimestamp, formatLastSeen, formatEta, formatPortDate } from '../../utils/formatters'
+import { formatLastSeen, formatEta, formatPortDate } from '../../utils/formatters'
 import './VesselPanel.css'
 
 const TABS = ['Overview', 'Ownership', 'Sanctions', 'History']

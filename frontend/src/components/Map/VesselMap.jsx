@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, TileLayer, useMapEvents } from 'react-leaflet'
 import VesselMarker from './VesselMarker'
+import { isInsideViewport } from '../../utils/mapUtils'
 import 'leaflet/dist/leaflet.css'
 import './VesselMap.css'
 
@@ -29,27 +30,6 @@ function readViewport(map) {
   }
 }
 
-export function isInsideViewport(vessel, viewport) {
-  if (!viewport) return true
-
-  const lat = Number(vessel?.position?.lat)
-  const lon = Number(vessel?.position?.lon)
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false
-
-  const inLatitude = lat >= viewport.south && lat <= viewport.north
-  if (!inLatitude) return false
-
-  const span = viewport.east - viewport.west
-  if (span >= 360) return true
-
-  // Handle both continuous Leaflet coords (where east > west even past 180)
-  // and wrapped bounds (where east < west across antimeridian)
-  const effectiveSpan = span >= 0 ? span : span + 360
-  if (effectiveSpan >= 360) return true
-
-  const offset = ((lon - viewport.west) % 360 + 360) % 360
-  return offset <= effectiveSpan
-}
 
 function markerLimitForZoom(zoom = 3) {
   return MAX_MARKERS_BY_ZOOM.find((entry) => zoom <= entry.zoom)?.limit ?? 1400

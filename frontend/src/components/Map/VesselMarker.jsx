@@ -3,24 +3,11 @@ import { Marker, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import { getVesselColor, getVesselLabel } from '../../utils/vesselTypes'
 import { getRiskColor, getRiskLabelShort } from '../../utils/riskColors'
+import { roundedHeading, riskBand } from '../../utils/mapUtils'
 
-export const iconCache = new Map()
+const iconCache = new Map()
 
-export function roundedHeading(heading) {
-  const value = Number(heading)
-  if (!Number.isFinite(value)) return 0
-  const normalized = ((value % 360) + 360) % 360
-  return (Math.round(normalized / 10) * 10) % 360
-}
-
-export function riskBand(score) {
-  if (score >= 75) return 'critical'
-  if (score >= 50) return 'high'
-  if (score >= 25) return 'medium'
-  return 'low'
-}
-
-export function createVesselIcon(vesselType, heading, isSelected, riskScore) {
+function createVesselIcon(vesselType, heading, isSelected, riskScore) {
   const color = getVesselColor(vesselType)
   const size = isSelected ? 30 : 22
   const rotation = roundedHeading(heading)
