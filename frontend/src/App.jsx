@@ -68,7 +68,9 @@ export default function App() {
     return vessels.filter((v) => {
       if (!selectedTypes.has(v.type)) return false
       const riskScore = v.riskScore ?? 0
-      if (riskScore < filters.riskMin || riskScore > filters.riskMax) return false
+      const minScore = typeof filters.riskMin === 'number' ? filters.riskMin : 0
+      const maxScore = typeof filters.riskMax === 'number' ? filters.riskMax : 100
+      if (riskScore < minScore || riskScore > maxScore) return false
       return true
     })
   }, [vessels, filters])
