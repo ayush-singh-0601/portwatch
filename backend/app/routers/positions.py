@@ -8,6 +8,7 @@ Routes::
 """
 
 from datetime import datetime, timedelta, timezone
+import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, or_, select
@@ -89,10 +90,20 @@ async def get_current_positions(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="bbox must be 4 comma-separated floats: min_lon,min_lat,max_lon,max_lat",
             )
+        if not all(math.isfinite(v) for v in (min_lon, min_lat, max_lon, max_lat)):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="bbox coordinates must be finite numbers",
+            )
         if not (-90.0 <= min_lat <= 90.0 and -90.0 <= max_lat <= 90.0 and min_lat <= max_lat):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Latitude values must be between -90 and 90, and min_lat must be <= max_lat",
+            )
+        if not (-180.0 <= min_lon <= 180.0 and -180.0 <= max_lon <= 180.0):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Longitude values must be between -180 and 180",
             )
         if min_lon <= max_lon:
             lon_filter = VesselPosition.longitude.between(min_lon, max_lon)
@@ -160,6 +171,12 @@ async def get_position_history(
             mmsi=None,
             positions=[],
             total=0,
+        )
+
+    if start_time is not None and end_time is not None and start_time > end_time:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="start_time must be less than or equal to end_time",
         )
 
     # Query positions by MMSI
