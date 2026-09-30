@@ -150,7 +150,7 @@ class RiskScoringAgent:
         )
         self.db.add(risk_score)
         await self.db.commit()
-        await self.db.refresh(risk_score)
+        await self.db.refresh(risk_score, attribute_names=["id", "total_score", "calculated_at", "factors"])
 
         logger.info(
             f"Risk score for IMO {vessel_imo}: {total}/100 "
