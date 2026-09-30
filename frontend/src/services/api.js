@@ -65,6 +65,13 @@ export async function getVessel(imo) {
   return api.get(`/vessels/${cleanImo(imo)}`)
 }
 
+/** Fetch a single vessel by MMSI when IMO is unknown */
+export async function getVesselByMmsi(mmsi) {
+  if (!mmsi) return null
+  const cleanMmsi = String(mmsi).replace(/\D/g, '')
+  return api.get(`/vessels/mmsi/${cleanMmsi}`)
+}
+
 /** Search vessels by name */
 export async function searchVessels(query) {
   return api.get('/vessels', { params: { name: query } })
