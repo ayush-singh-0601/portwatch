@@ -260,6 +260,20 @@ export default function useVessels() {
     setSelectedVessel(null)
   }, [])
 
+  // ── Update vessel in state and selection ───────────────────
+  const updateVessel = useCallback((updatedVessel) => {
+    if (!updatedVessel?.id) return
+    const id = String(updatedVessel.id)
+    setSelectedVessel((prev) => (prev && String(prev.id) === id ? { ...prev, ...updatedVessel } : prev))
+    setVessels((prev) =>
+      prev.map((v) =>
+        String(v.id) === id || (v.imo && updatedVessel.imo && String(v.imo) === String(updatedVessel.imo))
+          ? { ...v, ...updatedVessel }
+          : v
+      )
+    )
+  }, [])
+
   // ── Initial load ───────────────────────────────────────────
   useEffect(() => {
     fetchVessels()
@@ -281,6 +295,7 @@ export default function useVessels() {
     wsConnected,
     searchVessels,
     selectVessel,
+    updateVessel,
     clearSelection,
     refetch: fetchVessels,
   }
