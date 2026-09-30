@@ -5,51 +5,10 @@ import IdentityCard from './IdentityCard'
 import OwnershipGraph from './OwnershipGraph'
 import { calculateRisk, generateReport, getOwnership, screenSanctions } from '../../services/api'
 import { getVesselBadgeClass, getVesselLabel } from '../../utils/vesselTypes'
+import { parseTimestamp, formatLastSeen, formatEta, formatPortDate } from '../../utils/formatters'
 import './VesselPanel.css'
 
 const TABS = ['Overview', 'Ownership', 'Sanctions', 'History']
-
-export function parseTimestamp(val) {
-  if (val == null || val === '') return null
-  if (typeof val === 'number') {
-    return val < 1e11 ? val * 1000 : val
-  }
-  if (typeof val === 'string' && !isNaN(val) && !isNaN(parseFloat(val))) {
-    const num = Number(val)
-    return num < 1e11 ? num * 1000 : num
-  }
-  const parsed = Date.parse(val)
-  return isNaN(parsed) ? null : parsed
-}
-
-export function formatLastSeen(lastSeen) {
-  if (!lastSeen) return '—'
-  const timestamp = parseTimestamp(lastSeen)
-  if (!timestamp || isNaN(timestamp)) return '—'
-  const diff = Date.now() - timestamp
-  if (diff < 0) return 'Just now'
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'Just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  return `${Math.floor(hrs / 24)}d ago`
-}
-
-export function formatEta(eta) {
-  if (!eta) return '—'
-  const timestamp = parseTimestamp(eta)
-  if (!timestamp || isNaN(timestamp)) return '—'
-  try {
-    const d = new Date(timestamp)
-    if (isNaN(d.getTime())) return '—'
-    return d.toLocaleString('en-US', {
-      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-    })
-  } catch {
-    return '—'
-  }
-}
 
 export default function VesselPanel({ vessel, onClose, onVesselUpdated }) {
   const [activeTab, setActiveTab] = useState('Overview')
@@ -449,7 +408,7 @@ export default function VesselPanel({ vessel, onClose, onVesselUpdated }) {
             aria-labelledby="tab-history"
             tabIndex={0}
           >
-            {vessel.portCalls && vessel.portCalls.length > 0 ? (
+            {Array.isArray(vessel.portCalls) && vessel.portCalls.length > 0 ? (
               <div className="vessel-panel-section">
                 <h4 className="vessel-panel-section-title">Port Call History</h4>
                 <div className="port-calls-timeline">
@@ -458,17 +417,19 @@ export default function VesselPanel({ vessel, onClose, onVesselUpdated }) {
                       <div className="port-call-indicator"></div>
                       <div className="port-call-details">
                         <div className="port-call-header">
-                          <span className="port-call-name">{pc.portName} ({pc.portCountry})</span>
+                          <span className="port-call-name">
+                            {pc.portName || 'Unknown Port'}{pc.portCountry ? ` (${pc.portCountry})` : ''}
+                          </span>
                           {pc.pscDetention && <span className="badge badge-danger">Detention</span>}
                         </div>
                         <div className="port-call-meta mono">
-                          <span>Arr: {pc.arrivalTime ? new Date(pc.arrivalTime).toLocaleDateString() : '—'}</span>
+                          <span>Arr: {formatPortDate(pc.arrivalTime)}</span>
                           <span className="port-call-sep">|</span>
-                          <span>Dep: {pc.departureTime ? new Date(pc.departureTime).toLocaleDateString() : '—'}</span>
+                          <span>Dep: {formatPortDate(pc.departureTime)}</span>
                         </div>
-                        {pc.pscDeficiencies > 0 && (
+                        {Number(pc.pscDeficiencies) > 0 && (
                           <div className="port-call-deficiencies text-warning">
-                            {pc.pscDeficiencies} PSC Deficiencies
+                            {pc.pscDeficiencies} PSC {pc.pscDeficiencies === 1 ? 'Deficiency' : 'Deficiencies'}
                           </div>
                         )}
                       </div>
