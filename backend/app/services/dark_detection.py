@@ -255,8 +255,14 @@ class DarkVesselDetector:
                 LIMIT 1
                 """
             )
-            result = await self.db.execute(postgis_q, {"lat": lat, "lon": lon, "radius_m": radius_m})
-            row = result.fetchone()
+            if isinstance(self.db, AsyncSession):
+                async with self.db.begin_nested():
+                    result = await self.db.execute(postgis_q, {"lat": lat, "lon": lon, "radius_m": radius_m})
+                    row = result.fetchone()
+            else:
+                result = await self.db.execute(postgis_q, {"lat": lat, "lon": lon, "radius_m": radius_m})
+                row = result.fetchone()
+
             if row is not None:
                 # ST_DWithin found a nearby port — no need for a second query.
                 return True
