@@ -4,31 +4,36 @@ import L from 'leaflet'
 import { getVesselColor, getVesselLabel } from '../../utils/vesselTypes'
 import { getRiskColor, getRiskLabelShort } from '../../utils/riskColors'
 
-const iconCache = new Map()
+export const iconCache = new Map()
 
-function roundedHeading(heading) {
+export function roundedHeading(heading) {
   const value = Number(heading)
   if (!Number.isFinite(value)) return 0
-  return Math.round(value / 10) * 10
+  const normalized = ((value % 360) + 360) % 360
+  return (Math.round(normalized / 10) * 10) % 360
 }
 
-function riskBand(score) {
+export function riskBand(score) {
   if (score >= 75) return 'critical'
   if (score >= 50) return 'high'
   if (score >= 25) return 'medium'
   return 'low'
 }
 
-function createVesselIcon(vesselType, heading, isSelected, riskScore) {
+export function createVesselIcon(vesselType, heading, isSelected, riskScore) {
   const color = getVesselColor(vesselType)
   const size = isSelected ? 30 : 22
   const rotation = roundedHeading(heading)
   const band = riskBand(riskScore ?? 0)
   const cacheKey = `${vesselType}|${rotation}|${isSelected}|${band}`
   const cached = iconCache.get(cacheKey)
-  if (cached) return cached
+  if (cached) {
+    iconCache.delete(cacheKey)
+    iconCache.set(cacheKey, cached)
+    return cached
+  }
 
-  if (iconCache.size > 500) {
+  if (iconCache.size >= 500) {
     const firstKey = iconCache.keys().next().value
     if (firstKey) iconCache.delete(firstKey)
   }
@@ -115,7 +120,7 @@ function VesselMarker({ vessel, isSelected, onClick }) {
               {getVesselLabel(vessel.type)}
             </span>
             <span>{Number.isFinite(speed) ? speed.toFixed(1) : '0.0'} kn</span>
-            <span>{Number.isFinite(heading) ? Math.round(heading) : 0} deg</span>
+            <span>{Number.isFinite(heading) ? `${Math.round(((heading % 360) + 360) % 360)}°` : '0°'}</span>
           </div>
           {Number.isFinite(vessel.riskScore) && vessel.riskScore >= 25 && (
             <div style={{
