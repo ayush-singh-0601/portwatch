@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, TileLayer, useMapEvents } from 'react-leaflet'
 import VesselMarker from './VesselMarker'
 import 'leaflet/dist/leaflet.css'
@@ -107,19 +107,24 @@ function MapViewportTracker({ onViewportChange }) {
 
 function MapSelectionFlyer({ selectedVessel }) {
   const map = useMapEvents({})
+  const lastFlownIdRef = useRef(null)
+
   useEffect(() => {
-    if (!selectedVessel || !isValidPosition(selectedVessel)) return
-    const lat = Number(selectedVessel.position.lat)
-    const lon = Number(selectedVessel.position.lon)
-    const center = map.getCenter()
-    const distLat = Math.abs(center.lat - lat)
-    const distLon = Math.abs(center.lng - lon)
-    if (distLat > 0.001 || distLon > 0.001) {
+    if (!selectedVessel) {
+      lastFlownIdRef.current = null
+      return
+    }
+    if (!isValidPosition(selectedVessel)) return
+
+    if (selectedVessel.id !== lastFlownIdRef.current) {
+      lastFlownIdRef.current = selectedVessel.id
+      const lat = Number(selectedVessel.position.lat)
+      const lon = Number(selectedVessel.position.lon)
       map.flyTo([lat, lon], Math.max(map.getZoom(), 6), {
         duration: 0.8,
       })
     }
-  }, [map, selectedVessel?.id, selectedVessel?.position?.lat, selectedVessel?.position?.lon])
+  }, [map, selectedVessel])
 
   return null
 }
