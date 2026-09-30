@@ -236,11 +236,16 @@ export default function useVessels() {
         return
       }
       if (typeof vesselOrId === 'object') {
-        selectedVesselIdRef.current = vesselOrId.id ?? null
+        const id = String(vesselOrId.id ?? vesselOrId.imo ?? vesselOrId.mmsi ?? '')
+        selectedVesselIdRef.current = id || null
         setSelectedVessel(vesselOrId)
       } else {
+        const target = String(vesselOrId).trim()
         const found = vessels.find(
-          (v) => v.id === vesselOrId || v.imo === String(vesselOrId)
+          (v) =>
+            String(v.id) === target ||
+            String(v.imo) === target ||
+            String(v.mmsi) === target
         )
         selectedVesselIdRef.current = found?.id ?? null
         setSelectedVessel(found || null)
