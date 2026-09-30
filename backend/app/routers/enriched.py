@@ -191,17 +191,16 @@ async def get_enriched_vessels(
         selectinload(Vessel.sanctions_matches).selectinload(SanctionsMatch.sanctions_entry),
     )
 
-    if include_inactive_registered or not active_mmsis:
-        if active_mmsis:
-            vessel_query = vessel_query.where(
-                or_(Vessel.mmsi.in_(active_mmsis), Vessel.mmsi.is_(None))
-            )
+    if include_inactive_registered:
         vessel_query = vessel_query.order_by(Vessel.updated_at.desc()).limit(limit)
-    else:
+        vessel_result = await db.execute(vessel_query)
+        vessels = list(vessel_result.scalars().all())
+    elif active_mmsis:
         vessel_query = vessel_query.where(Vessel.mmsi.in_(active_mmsis)).limit(limit)
-
-    vessel_result = await db.execute(vessel_query)
-    vessels = list(vessel_result.scalars().all())
+        vessel_result = await db.execute(vessel_query)
+        vessels = list(vessel_result.scalars().all())
+    else:
+        vessels = []
     imo_list = [v.imo for v in vessels if v.imo is not None]
 
     # ── 3. Ownership per vessel (single query for edges) ──────────
