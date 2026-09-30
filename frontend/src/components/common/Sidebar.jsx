@@ -77,7 +77,13 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
   }, [onFiltersChange])
 
   return (
-    <aside className={`sidebar glass-panel ${open ? 'open' : ''}`}>
+    <>
+      {open && <div className="sidebar-backdrop" onClick={onClose} aria-hidden="true" />}
+      <aside
+        className={`sidebar glass-panel ${open ? 'open' : ''}`}
+        aria-hidden={!open}
+        aria-label="Filter panel"
+      >
       {/* Header */}
       <div className="sidebar-header">
         <h3 className="sidebar-title">
@@ -184,13 +190,21 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
             </label>
           </div>
           <div className="sidebar-range-bar">
-            <div
-              className="sidebar-range-fill"
-              style={{
-                left: `${Math.max(0, filters.riskMin)}%`,
-                width: `${Math.max(0, filters.riskMax - filters.riskMin)}%`,
-              }}
-            />
+            {(() => {
+              const minScore = typeof filters.riskMin === 'number' ? Math.max(0, Math.min(100, filters.riskMin)) : 0
+              const maxScore = typeof filters.riskMax === 'number' ? Math.max(0, Math.min(100, filters.riskMax)) : 100
+              const leftPct = Math.min(minScore, maxScore)
+              const widthPct = Math.max(0, Math.max(minScore, maxScore) - leftPct)
+              return (
+                <div
+                  className="sidebar-range-fill"
+                  style={{
+                    left: `${leftPct}%`,
+                    width: `${widthPct}%`,
+                  }}
+                />
+              )
+            })()}
           </div>
         </div>
       </div>
@@ -200,5 +214,6 @@ export default function Sidebar({ open, filters, onFiltersChange, vesselCount, t
         Reset Filters
       </button>
     </aside>
+    </>
   )
 }
