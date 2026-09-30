@@ -4,14 +4,14 @@
    edges with labels showing relationship types.
    ═══════════════════════════════════════════════════════════════ */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as d3 from 'd3'
 import './OwnershipGraph.css'
 
 /**
  * Generate mock ownership graph from vessel mock data.
  */
-function buildMockGraph(vessel) {
+export function buildMockGraph(vessel) {
   const hasOwnership = vessel?.ownership && (
     vessel.ownership.registeredOwner ||
     vessel.ownership.beneficialOwner ||
@@ -86,18 +86,25 @@ function buildMockGraph(vessel) {
   return { nodes, links }
 }
 
-function normalizeGraphData(vessel, graphData) {
+export function normalizeGraphData(vessel, graphData) {
   if (!graphData) return buildMockGraph(vessel)
 
   // If already in D3 format ({ nodes: [...], links: [...] })
   if (Array.isArray(graphData.nodes) && Array.isArray(graphData.links)) {
-    const nodeIds = new Set(graphData.nodes.map(n => n.id))
-    const links = graphData.links.filter(l => {
-      const s = typeof l.source === 'object' ? l.source?.id : l.source
-      const t = typeof l.target === 'object' ? l.target?.id : l.target
-      return nodeIds.has(s) && nodeIds.has(t)
-    })
-    return { nodes: graphData.nodes, links }
+    const nodes = graphData.nodes.map(n => ({ ...n }))
+    const nodeIds = new Set(nodes.map(n => n.id))
+    const links = graphData.links
+      .filter(l => {
+        const s = typeof l.source === 'object' ? l.source?.id : l.source
+        const t = typeof l.target === 'object' ? l.target?.id : l.target
+        return nodeIds.has(s) && nodeIds.has(t)
+      })
+      .map(l => ({
+        ...l,
+        source: typeof l.source === 'object' ? l.source.id : l.source,
+        target: typeof l.target === 'object' ? l.target.id : l.target,
+      }))
+    return { nodes, links }
   }
 
   // If backend API format ({ vessel_imo, nodes: [...], edges: [...] })
@@ -171,7 +178,7 @@ export default function OwnershipGraph({ vessel, graphData }) {
   const containerRef = useRef(null)
   const [dimensions, setDimensions] = useState({ width: 380, height: 350 })
 
-  const data = normalizeGraphData(vessel, graphData)
+  const data = useMemo(() => normalizeGraphData(vessel, graphData), [vessel, graphData])
   const hasEntities = Boolean(data?.nodes?.some(n => !n.isCenter))
 
   // Resize observer

@@ -38,7 +38,7 @@ export default function IdentityCard({ vessel }) {
           <span className="identity-card-value identity-card-type">
             <span
               className="identity-card-type-dot"
-              style={{ background: typeColor, boxShadow: `0 0 6px ${typeColor}44` }}
+              style={{ background: typeColor, boxShadow: `0 0 6px color-mix(in srgb, ${typeColor} 30%, transparent)` }}
             />
             {getVesselLabel(vessel.type)}
           </span>

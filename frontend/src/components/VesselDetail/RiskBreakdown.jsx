@@ -221,7 +221,11 @@ export default function RiskBreakdown({ vessel }) {
         <div className="risk-breakdown-score-info">
           <span
             className="risk-breakdown-level-badge"
-            style={{ background: levelColor + '22', color: levelColor, borderColor: levelColor + '44' }}
+            style={{
+              background: `color-mix(in srgb, ${levelColor} 14%, transparent)`,
+              color: levelColor,
+              borderColor: `color-mix(in srgb, ${levelColor} 28%, transparent)`,
+            }}
           >
             {levelLabel}
           </span>
