@@ -207,8 +207,11 @@ class AISAnomalyDetector:
                 current_loitering.append(pos)
             else:
                 if start_pos is not None and len(current_loitering) > 1:
-                    if pos.time and start_pos.time:
-                        duration = (pos.time - start_pos.time).total_seconds() / 3600.0
+                    last_slow = current_loitering[-1]
+                    if last_slow.time and start_pos.time:
+                        t_start = start_pos.time.replace(tzinfo=timezone.utc) if start_pos.time.tzinfo is None else start_pos.time
+                        t_end = last_slow.time.replace(tzinfo=timezone.utc) if last_slow.time.tzinfo is None else last_slow.time
+                        duration = (t_end - t_start).total_seconds() / 3600.0
                         if duration >= 4.0:
                             # Check if near a sanctioned port or ship breaking yard
                             is_near_risk = await self._is_near_risk_zone(
@@ -217,8 +220,8 @@ class AISAnomalyDetector:
                             if is_near_risk:
                                 loitering_events.append({
                                     "vessel_imo": vessel_imo,
-                                    "start_time": start_pos.time,
-                                    "end_time": pos.time,
+                                    "start_time": t_start,
+                                    "end_time": t_end,
                                     "duration_hours": duration,
                                     "latitude": start_pos.latitude,
                                     "longitude": start_pos.longitude,
@@ -231,7 +234,9 @@ class AISAnomalyDetector:
         if start_pos is not None and len(current_loitering) > 1:
             last_pos = current_loitering[-1]
             if last_pos.time and start_pos.time:
-                duration = (last_pos.time - start_pos.time).total_seconds() / 3600.0
+                t_start = start_pos.time.replace(tzinfo=timezone.utc) if start_pos.time.tzinfo is None else start_pos.time
+                t_end = last_pos.time.replace(tzinfo=timezone.utc) if last_pos.time.tzinfo is None else last_pos.time
+                duration = (t_end - t_start).total_seconds() / 3600.0
                 if duration >= 4.0:
                     is_near_risk = await self._is_near_risk_zone(
                         start_pos.latitude, start_pos.longitude
@@ -239,8 +244,8 @@ class AISAnomalyDetector:
                     if is_near_risk:
                         loitering_events.append({
                             "vessel_imo": vessel_imo,
-                            "start_time": start_pos.time,
-                            "end_time": last_pos.time,
+                            "start_time": t_start,
+                            "end_time": t_end,
                             "duration_hours": duration,
                             "latitude": start_pos.latitude,
                             "longitude": start_pos.longitude,
