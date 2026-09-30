@@ -111,7 +111,6 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
             placeholder="Search vessels by name, IMO, or MMSI..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
           />
           <kbd className="search-kbd">ESC</kbd>
         </div>
