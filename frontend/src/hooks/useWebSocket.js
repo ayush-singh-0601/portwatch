@@ -42,6 +42,7 @@ export default function useWebSocket(url) {
   const reconnectAttemptsRef = useRef(0)
   const maxReconnectDelay = 30000
   const pendingUpdatesRef = useRef({})
+  const isDestroyedRef = useRef(false)
 
   const wsUrl = useMemo(() => {
     if (url) return url
@@ -58,11 +59,21 @@ export default function useWebSocket(url) {
   }, [url])
 
   const connect = useCallback(() => {
+    if (isDestroyedRef.current) return
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
+    }
+
     try {
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
 
       ws.onopen = () => {
+        if (isDestroyedRef.current) {
+          ws.close()
+          return
+        }
         console.log('[WS] Connected to', wsUrl)
         setIsConnected(true)
         setError(null)
@@ -98,6 +109,7 @@ export default function useWebSocket(url) {
       ws.onclose = () => {
         setIsConnected(false)
         wsRef.current = null
+        if (isDestroyedRef.current) return
 
         // Auto-reconnect with exponential backoff
         const attempts = reconnectAttemptsRef.current
@@ -111,7 +123,11 @@ export default function useWebSocket(url) {
 
       ws.onerror = () => {
         setError('WebSocket connection error')
-        ws.close()
+        try {
+          ws.close()
+        } catch {
+          // Ignore error closing already closed socket
+        }
       }
     } catch (err) {
       setError(err.message)
@@ -119,14 +135,26 @@ export default function useWebSocket(url) {
   }, [wsUrl])
 
   useEffect(() => {
+    isDestroyedRef.current = false
     connect()
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close()
-        wsRef.current = null
-      }
+      isDestroyedRef.current = true
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
+      if (wsRef.current) {
+        const socket = wsRef.current
+        wsRef.current = null
+        socket.onopen = null
+        socket.onmessage = null
+        socket.onerror = null
+        socket.onclose = null
+        try {
+          socket.close()
+        } catch {
+          // Ignore error on close
+        }
       }
     }
   }, [connect])
