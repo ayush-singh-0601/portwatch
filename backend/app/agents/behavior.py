@@ -11,6 +11,7 @@ Saves results to dark_events, sts_events tables for risk score calculations.
 """
 
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import delete
@@ -108,6 +109,10 @@ class BehaviorAnalysisAgent:
         
         # Clear all existing global STS events from the last 24 hours
         # and replace them with freshly detected ones
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=24.0)
+        await self.db.execute(
+            delete(STSEvent).where(STSEvent.start_time >= cutoff)
+        )
         for event in sts_events:
             self.db.add(event)
             
