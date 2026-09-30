@@ -195,6 +195,16 @@ async def vessel_position_stream(websocket: WebSocket) -> None:
                                 json.dumps({"error": "bbox coordinates must be finite numbers"})
                             )
                             continue
+                        if not (-90.0 <= min_lat <= 90.0 and -90.0 <= max_lat <= 90.0 and min_lat <= max_lat):
+                            await websocket.send_text(
+                                json.dumps({"error": "Latitude values must be between -90 and 90, and min_lat must be <= max_lat"})
+                            )
+                            continue
+                        if not (-180.0 <= min_lon <= 180.0 and -180.0 <= max_lon <= 180.0):
+                            await websocket.send_text(
+                                json.dumps({"error": "Longitude values must be between -180 and 180"})
+                            )
+                            continue
                     manager.update_bbox(websocket, bbox)
                     await websocket.send_text(
                         json.dumps({"status": "filter_updated", "bbox": bbox})
