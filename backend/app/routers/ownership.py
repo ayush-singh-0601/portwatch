@@ -70,7 +70,11 @@ async def get_ownership_graph(
                 or_(
                     OwnershipEdge.source_entity_id.in_(entity_ids),
                     OwnershipEdge.target_entity_id.in_(entity_ids),
-                )
+                ),
+                or_(
+                    OwnershipEdge.vessel_imo == imo,
+                    OwnershipEdge.vessel_imo.is_(None),
+                ),
             )
         )
         chain_edges = list(chain_edges_result.scalars().all())
