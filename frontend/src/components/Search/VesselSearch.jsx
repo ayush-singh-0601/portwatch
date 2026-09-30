@@ -16,6 +16,7 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
   const listRef = useRef(null)
 
   const modalRef = useRef(null)
+  const isKeyboardNavRef = useRef(false)
 
   // Auto-focus input on mount
   useEffect(() => {
@@ -46,9 +47,11 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
     (e) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
+        isKeyboardNavRef.current = true
         setActiveIndex((prev) => Math.min(prev + 1, Math.max(0, results.length - 1)))
       } else if (e.key === 'ArrowUp') {
         e.preventDefault()
+        isKeyboardNavRef.current = true
         setActiveIndex((prev) => Math.max(prev - 1, 0))
       } else if (e.key === 'Enter' && results.length > 0) {
         e.preventDefault()
@@ -79,10 +82,13 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
     [results, activeIndex, onSelect, onClose]
   )
 
-  // Scroll active item into view
+  // Scroll active item into view when navigating via keyboard
   useEffect(() => {
-    const activeEl = listRef.current?.children[activeIndex]
-    activeEl?.scrollIntoView({ block: 'nearest' })
+    if (isKeyboardNavRef.current) {
+      const activeEl = listRef.current?.children[activeIndex]
+      activeEl?.scrollIntoView({ block: 'nearest' })
+      isKeyboardNavRef.current = false
+    }
   }, [activeIndex])
 
   return (
@@ -112,6 +118,21 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          {query && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => {
+                setQuery('')
+                inputRef.current?.focus()
+              }}
+              aria-label="Clear search"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          )}
           <kbd className="search-kbd">ESC</kbd>
         </div>
 
@@ -126,7 +147,10 @@ export default function VesselSearch({ onSearch, results = [], onSelect, onClose
                 aria-selected={i === activeIndex}
                 className={`search-result-item ${i === activeIndex ? 'active' : ''}`}
                 onClick={() => onSelect(vessel)}
-                onMouseEnter={() => setActiveIndex(i)}
+                onMouseEnter={() => {
+                  isKeyboardNavRef.current = false
+                  setActiveIndex(i)
+                }}
               >
                 <div className="search-result-left">
                   <span

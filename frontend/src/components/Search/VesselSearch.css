@@ -59,6 +59,23 @@
   color: var(--text-muted);
 }
 
+.search-clear-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs, 4px);
+  transition: color var(--transition-fast, 0.15s ease);
+}
+
+.search-clear-btn:hover {
+  color: var(--text-primary);
+}
+
 .search-kbd {
   padding: 2px 8px;
   border-radius: 4px;
