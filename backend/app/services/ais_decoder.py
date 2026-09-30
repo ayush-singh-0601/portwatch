@@ -15,6 +15,7 @@ Usage::
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -297,11 +298,12 @@ def extract_vessel_identity(decoded: dict[str, Any]) -> VesselIdentity | None:
 
 
 def _safe_float(value: Any) -> float | None:
-    """Safely convert a value to float, returning None on failure."""
+    """Safely convert a value to float, returning None on failure or non-finite values."""
     if value is None:
         return None
     try:
-        return float(value)
+        val = float(value)
+        return val if math.isfinite(val) else None
     except (ValueError, TypeError):
         return None
 
