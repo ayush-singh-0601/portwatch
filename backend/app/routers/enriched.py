@@ -284,10 +284,14 @@ async def get_enriched_vessels(
         # Port calls
         port_calls_list = []
         if vessel.port_calls:
-            # Sort by arrival time desc
+            # Sort by arrival time desc (normalizing naive datetimes to UTC)
             sorted_pcs = sorted(
                 vessel.port_calls,
-                key=lambda x: x.arrival_time if x.arrival_time else _EPOCH,
+                key=lambda x: (
+                    x.arrival_time.replace(tzinfo=timezone.utc)
+                    if x.arrival_time and x.arrival_time.tzinfo is None
+                    else (x.arrival_time if x.arrival_time else _EPOCH)
+                ),
                 reverse=True
             )
             for pc in sorted_pcs:
@@ -305,7 +309,7 @@ async def get_enriched_vessels(
         enriched.append({
             "id": str(vessel.imo) if vessel.imo is not None else str(vessel.mmsi or ""),
             "imo": str(vessel.imo) if vessel.imo is not None else None,
-            "mmsi": str(vessel.mmsi) if vessel.mmsi else None,
+            "mmsi": str(vessel.mmsi) if vessel.mmsi is not None else None,
             "callSign": vessel.call_sign,
             "name": vessel.name,
             "type": _vessel_type_normalise(vessel.vessel_type),
