@@ -223,12 +223,13 @@ if "GB" in _FLAGS and "UK" not in _FLAGS:
 def get_flag_info(code: str | None) -> dict[str, str] | None:
     """Return ``{"code": ..., "name": ..., "emoji": ...}`` for a flag code.
 
-    Returns ``None`` if the code is not recognised.
+    Returns ``None`` if the code is not recognised or empty.
     """
-    if not code:
+    if not code or not str(code).strip():
         return None
-    entry = _FLAGS.get(code.upper())
+    clean = str(code).strip().upper()
+    entry = _FLAGS.get(clean)
     if entry is None:
         # Return a generic entry with the code only
-        return {"code": code.upper(), "name": code.upper(), "emoji": "🏴"}
-    return {"code": code.upper(), "name": entry["name"], "emoji": entry["emoji"]}
+        return {"code": clean, "name": clean, "emoji": "🏴"}
+    return {"code": clean, "name": entry["name"], "emoji": entry["emoji"]}
