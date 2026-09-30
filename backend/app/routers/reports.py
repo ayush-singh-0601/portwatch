@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agents.intel_report import IntelReportAgent
 from app.database import get_db
 from app.models.vessel import Vessel
-from app.schemas.report import ReportRequest, ReportResponse, ReportStatusResponse
+from app.schemas.report import ReportFormat, ReportRequest, ReportResponse, ReportStatusResponse
 
 router = APIRouter(tags=["Reports"])
 
@@ -90,7 +90,7 @@ async def generate_report(
         report_id=result["report_id"],
         vessel_imo=imo,
         generated_at=datetime.now(timezone.utc),
-        format=request.format,
+        format=ReportFormat(result["format"]),
         download_url=result["download_url"],
         file_size_bytes=result["file_size_bytes"],
     )

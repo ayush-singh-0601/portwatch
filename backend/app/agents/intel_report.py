@@ -154,7 +154,12 @@ class IntelReportAgent:
         filename = f"portwatch_report_{vessel_imo}_{report_id[:8]}.{output_format}"
         output_path = REPORTS_DIR / filename
 
-        filepath = generate_report_pdf("intel_report.html", context, output_path)
+        if output_format.lower() == "html":
+            html_content = render_html("intel_report.html", context)
+            output_path.write_text(html_content, encoding="utf-8")
+            filepath = output_path
+        else:
+            filepath = generate_report_pdf("intel_report.html", context, output_path)
 
         file_size = filepath.stat().st_size
         logger.info(
