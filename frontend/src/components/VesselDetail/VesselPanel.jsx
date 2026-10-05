@@ -213,25 +213,25 @@ export default function VesselPanel({ vessel, onClose, onVesselUpdated }) {
                 <div className="vessel-panel-field">
                   <span className="label">Latitude</span>
                   <span className="mono">
-                    {vessel.position?.lat != null ? vessel.position.lat.toFixed(4) : '—'}°
+                    {Number.isFinite(vessel.position?.lat) ? `${vessel.position.lat.toFixed(4)}°` : '—'}
                   </span>
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">Longitude</span>
                   <span className="mono">
-                    {vessel.position?.lon != null ? vessel.position.lon.toFixed(4) : '—'}°
+                    {Number.isFinite(vessel.position?.lon) ? `${vessel.position.lon.toFixed(4)}°` : '—'}
                   </span>
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">Speed</span>
                   <span className="mono">
-                    {vessel.speed != null ? vessel.speed.toFixed(1) : '—'} kn
+                    {Number.isFinite(vessel.speed) ? `${Number(vessel.speed).toFixed(1)} kn` : '—'}
                   </span>
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">Heading</span>
                   <span className="mono">
-                    {vessel.heading != null ? vessel.heading : '—'}°
+                    {Number.isFinite(vessel.heading) ? `${Math.round(vessel.heading)}°` : '—'}
                   </span>
                 </div>
               </div>
@@ -243,13 +243,17 @@ export default function VesselPanel({ vessel, onClose, onVesselUpdated }) {
                 <div className="vessel-panel-field">
                   <span className="label">Gross Tonnage</span>
                   <span className="mono">
-                    {vessel.grossTonnage != null ? vessel.grossTonnage.toLocaleString() : '—'} GT
+                    {vessel.grossTonnage != null && !isNaN(vessel.grossTonnage)
+                      ? `${Number(vessel.grossTonnage).toLocaleString()} GT`
+                      : '—'}
                   </span>
                 </div>
                 <div className="vessel-panel-field">
                   <span className="label">Deadweight</span>
                   <span className="mono">
-                    {vessel.deadweight != null ? vessel.deadweight.toLocaleString() : '—'} DWT
+                    {vessel.deadweight != null && !isNaN(vessel.deadweight)
+                      ? `${Number(vessel.deadweight).toLocaleString()} DWT`
+                      : '—'}
                   </span>
                 </div>
                 <div className="vessel-panel-field">
