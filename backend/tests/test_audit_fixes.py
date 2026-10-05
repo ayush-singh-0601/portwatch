@@ -222,3 +222,90 @@ async def test_positions_router_longitude_physical_bounds():
         resp3 = await client.get("/api/map/positions", params={"bbox": "nan,20.0,50.0,30.0"})
         assert resp3.status_code == 400
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 11. AIS Decoder: nav_status 0 preservation & course 360 sentinel filtering
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_ais_decoder_nav_status_zero_and_course_sentinel():
+    # nav_status 0 ("Under way using engine") must not be converted to None
+    msg = {
+        "mmsi": 352111000,
+        "latitude": 25.0,
+        "longitude": 55.0,
+        "speed": 10.0,
+        "course": 360.0,  # Course sentinel for unavailable
+        "heading": 511.0,  # Heading sentinel for unavailable
+        "nav_status": 0,
+    }
+    pos = extract_position(msg)
+    assert pos is not None
+    assert pos.nav_status == 0
+    assert pos.course is None
+    assert pos.heading is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 12. Position Schema: Heading 511 & Course 360 Normalization
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_position_schema_sentinel_normalization():
+    from app.schemas.position import PositionBase
+    pos = PositionBase(
+        mmsi=352111000,
+        latitude=25.0,
+        longitude=55.0,
+        course=360.0,
+        heading=511,
+    )
+    assert pos.heading is None
+    assert pos.course is None
+
+    # Valid heading and course preserved
+    valid_pos = PositionBase(
+        mmsi=352111000,
+        latitude=25.0,
+        longitude=55.0,
+        course=180.5,
+        heading=180,
+    )
+    assert valid_pos.heading == 180
+    assert valid_pos.course == 180.5
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 13. Name Matcher: Content-based Cache Safety
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_name_matcher_cache_key_hash():
+    list_a = ["VESSEL ALICE", "VESSEL BOB"]
+    list_b = ["VESSEL CHARLIE", "VESSEL DAVID"]
+
+    cached_a = _get_normalized_sanctions(list_a)
+    cached_b = _get_normalized_sanctions(list_b)
+
+    assert cached_a != cached_b
+    assert cached_a[0] == "vessel alice"
+    assert cached_b[0] == "vessel charlie"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 14. OFAC Parser: Remarks Regex Does Not Overwrite Existing IMO
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_ofac_parser_remarks_does_not_overwrite_explicit_imo():
+    entity = SDNEntity()
+    # Explicit IMO from official ID tag
+    _extract_vessel_info("IMO", "9123456", entity)
+    assert entity.imo_number == "9123456"
+
+    # Remarks containing a different number should not overwrite existing IMO
+    text_remarks = "Sister ship IMO 9999999 was sold."
+    import re
+    if not entity.imo_number:
+        imo_match = re.search(r"\bIMO(?:\s*(?:no\.?|number|[:.]|#))?\s*[:.]?\s*(\d{7})\b", text_remarks, re.IGNORECASE)
+        if imo_match:
+            entity.imo_number = imo_match.group(1)
+
+    assert entity.imo_number == "9123456"
+

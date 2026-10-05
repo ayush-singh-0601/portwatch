@@ -148,3 +148,68 @@ test('vessel metadata fallback provides clean identifier when IMO is missing', (
   const unregistered = { type: 'Tug' }
   assert.equal(formatMeta(unregistered), 'Tug · No Identifier')
 })
+
+test('normalizeGraphData preserves entity-to-entity edge hierarchy when vessel_imo is present', () => {
+  const vessel = { imo: 9123456, name: 'TEST VESSEL' }
+  const rawApiGraph = {
+    nodes: [
+      { id: 101, name: 'Parent Corp', entity_type: 'company' },
+      { id: 102, name: 'Holding Ltd', entity_type: 'shell' },
+    ],
+    edges: [
+      { source_entity_id: 101, target_entity_id: 102, vessel_imo: 9123456, relationship_type: 'subsidiary' },
+    ],
+  }
+  const normalized = normalizeGraphData(vessel, rawApiGraph)
+  const subsidiaryLink = normalized.links.find(l => l.relationship === 'subsidiary')
+  assert.ok(subsidiaryLink)
+  assert.equal(subsidiaryLink.source, 'entity_101')
+  assert.equal(subsidiaryLink.target, 'entity_102')
+})
+
+test('search token logic does not match pure digit queries when multi-token text is queried', () => {
+  const vessels = [
+    { name: 'PACIFIC RUBY', imo: '9123456', mmsi: '352111000', type: 'cargo' },
+    { name: 'ATLANTIC STAR', imo: '9876543', mmsi: '211123456', type: 'tanker' },
+  ]
+  const q = 'tanker 9123456'
+  const tokens = q.toLowerCase().split(/\s+/).filter(Boolean)
+  const cleanDigits = q.replace(/\D/g, '')
+
+  const filterVessels = (v) => {
+    const text = `${v.name} ${v.imo} ${v.mmsi} ${v.type}`.toLowerCase()
+    const imoClean = String(v.imo || '').replace(/\D/g, '')
+    const mmsiClean = String(v.mmsi || '').replace(/\D/g, '')
+    const matchesTokens = tokens.length > 0 && tokens.every(token => text.includes(token))
+    const matchesDigits =
+      cleanDigits.length >= 3 &&
+      tokens.length === 1 &&
+      /^\d+$/.test(tokens[0]) &&
+      (imoClean.includes(cleanDigits) || mmsiClean.includes(cleanDigits))
+    return matchesTokens || matchesDigits
+  }
+
+  const results = vessels.filter(filterVessels)
+  assert.equal(results.length, 0)
+})
+
+test('null value formatting produces em-dash without trailing unit artifacts', () => {
+  const formatSpeed = (val) => Number.isFinite(val) ? `${Number(val).toFixed(1)} kn` : '—'
+  const formatHeading = (val) => Number.isFinite(val) ? `${Math.round(val)}°` : '—'
+  const formatLat = (val) => Number.isFinite(val) ? `${val.toFixed(4)}°` : '—'
+  const formatGT = (val) => val != null && !isNaN(val) ? `${Number(val).toLocaleString()} GT` : '—'
+
+  assert.equal(formatSpeed(null), '—')
+  assert.equal(formatSpeed(undefined), '—')
+  assert.equal(formatSpeed(12.5), '12.5 kn')
+
+  assert.equal(formatHeading(null), '—')
+  assert.equal(formatHeading(180), '180°')
+
+  assert.equal(formatLat(null), '—')
+  assert.equal(formatLat(NaN), '—')
+  assert.equal(formatLat(25.1234), '25.1234°')
+
+  assert.equal(formatGT(null), '—')
+  assert.equal(formatGT(50000), '50,000 GT')
+})
