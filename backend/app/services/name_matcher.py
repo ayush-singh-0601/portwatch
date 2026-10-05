@@ -83,19 +83,21 @@ def normalize_name(name: str) -> str:
     return text
 
 
-_NORMALIZED_SANCTIONS_CACHE: dict[int, tuple[int, list[str]]] = {}
+_MAX_CACHE_ENTRIES = 128
+_NORMALIZED_SANCTIONS_CACHE: dict[int, list[str]] = {}
 
 
 def _get_normalized_sanctions(sanctions_list: list[str]) -> list[str]:
     """Retrieve or compute and cache normalized strings for a sanctions list."""
-    cache_key = id(sanctions_list)
-    list_len = len(sanctions_list)
+    cache_key = hash(tuple(sanctions_list))
     cached = _NORMALIZED_SANCTIONS_CACHE.get(cache_key)
-    if cached is not None and cached[0] == list_len:
-        return cached[1]
+    if cached is not None:
+        return cached
 
     normalized = [normalize_name(s) for s in sanctions_list]
-    _NORMALIZED_SANCTIONS_CACHE[cache_key] = (list_len, normalized)
+    if len(_NORMALIZED_SANCTIONS_CACHE) >= _MAX_CACHE_ENTRIES:
+        _NORMALIZED_SANCTIONS_CACHE.clear()
+    _NORMALIZED_SANCTIONS_CACHE[cache_key] = normalized
     return normalized
 
 
