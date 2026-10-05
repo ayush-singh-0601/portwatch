@@ -178,6 +178,13 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
                         current_entity.entity_type = "individual"
                     else:
                         current_entity.entity_type = "organization"
+                elif tag == "program":
+                    if text:
+                        existing = [p.strip() for p in current_entity.program.split(";")] if current_entity.program else []
+                        if text not in existing:
+                            existing.append(text)
+                            current_entity.program = "; ".join(existing)
+
                 elif tag == "programList":
                     programs = [
                         normalize_text(p.text)
@@ -190,7 +197,8 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
                             for p in elem
                             if p.text
                         ]
-                    current_entity.program = "; ".join([p for p in programs if p])
+                    if programs:
+                        current_entity.program = "; ".join([p for p in programs if p])
 
                 # Aliases
                 elif tag == "aka" or tag == "akaName":
@@ -221,14 +229,15 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
 
                 elif tag == "remarks":
                     current_entity.remarks = text
-                    # Extract IMO from remarks if present
-                    imo_match = re.search(
-                        r"\bIMO(?:\s*(?:no\.?|number|[:.]|#))?\s*[:.]?\s*(\d{7})\b",
-                        text,
-                        re.IGNORECASE,
-                    )
-                    if imo_match:
-                        current_entity.imo_number = imo_match.group(1)
+                    # Extract IMO from remarks only if not already populated from official ID tags
+                    if not current_entity.imo_number:
+                        imo_match = re.search(
+                            r"\bIMO(?:\s*(?:no\.?|number|[:.]|#))?\s*[:.]?\s*(\d{7})\b",
+                            text,
+                            re.IGNORECASE,
+                        )
+                        if imo_match:
+                            current_entity.imo_number = imo_match.group(1)
 
                 # End of entity
                 if tag == "sdnEntry":
@@ -247,8 +256,9 @@ def parse_sdn_xml(xml_path: Path) -> list[SDNEntity]:
             if current_path:
                 current_path.pop()
 
-            # Free memory for processed elements
-            elem.clear()
+            # Free memory for processed elements at entity boundary
+            if tag == "sdnEntry":
+                elem.clear()
 
     vessels = sum(1 for e in entities if e.entity_type == "vessel")
     individuals = sum(1 for e in entities if e.entity_type == "individual")
