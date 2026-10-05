@@ -125,7 +125,7 @@ export function normalizeGraphData(vessel, graphData) {
     const links = graphData.edges
       .map(e => ({
         source: `entity_${e.source_entity_id}`,
-        target: e.vessel_imo ? vesselId : `entity_${e.target_entity_id}`,
+        target: e.target_entity_id != null ? `entity_${e.target_entity_id}` : vesselId,
         relationship: e.relationship_type || 'owner',
       }))
       .filter(l => nodeIds.has(l.source) && nodeIds.has(l.target))
