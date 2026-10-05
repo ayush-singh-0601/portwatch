@@ -80,6 +80,48 @@ const FACTOR_META = {
     maxPoints: 5,
     color: 'var(--text-secondary)',
   },
+  impossible_speed: {
+    label: 'Speed Spoofing',
+    icon: '⚡',
+    maxPoints: 20,
+    color: 'var(--danger)',
+  },
+  speed_spoofing: {
+    label: 'Speed Spoofing',
+    icon: '⚡',
+    maxPoints: 20,
+    color: 'var(--danger)',
+  },
+  duplicate_mmsi: {
+    label: 'Duplicate MMSI',
+    icon: '👥',
+    maxPoints: 25,
+    color: 'var(--danger)',
+  },
+  dark_event: {
+    label: 'AIS Dark Event',
+    icon: '📡',
+    maxPoints: 25,
+    color: 'var(--warning)',
+  },
+  dark_events: {
+    label: 'AIS Dark Events',
+    icon: '📡',
+    maxPoints: 25,
+    color: 'var(--warning)',
+  },
+  near_match_sanctions: {
+    label: 'Near Sanctions Match',
+    icon: '⚠️',
+    maxPoints: 10,
+    color: 'var(--warning)',
+  },
+  age_over_20: {
+    label: 'Vessel Age >20y',
+    icon: '🕰️',
+    maxPoints: 5,
+    color: 'var(--text-secondary)',
+  },
   // Legacy/fallback keys from old scoring
   sanctions_match: {
     label: 'Sanctions Match',
@@ -253,11 +295,12 @@ export default function RiskBreakdown({ vessel }) {
           [...factors]
             .sort((a, b) => b.points - a.points)
             .map((factor, i) => {
-              const meta = FACTOR_META[factor.factor_name] || {
-                label: factor.factor_name.replace(/_/g, ' '),
+              const rawName = factor.factor_name || 'Factor'
+              const meta = FACTOR_META[rawName] || {
+                label: rawName.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
                 icon: '•',
-                maxPoints: 30,
-                color: 'var(--text-secondary)',
+                maxPoints: Math.max(factor.points || 10, 20),
+                color: factor.points >= 20 ? 'var(--danger)' : factor.points >= 10 ? 'var(--warning)' : 'var(--text-secondary)',
               }
               const barWidth = Math.min(100, (factor.points / meta.maxPoints) * 100)
 
