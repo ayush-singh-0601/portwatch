@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -187,11 +187,27 @@ class IntelReportAgent:
     async def _get_ownership(self, imo: int) -> list:
         try:
             result = await self.db.execute(
-                select(OwnershipEntity)
-                .join(OwnershipEdge, OwnershipEdge.source_entity_id == OwnershipEntity.id)
+                select(OwnershipEntity, OwnershipEdge.relationship_type)
+                .join(
+                    OwnershipEdge,
+                    or_(
+                        OwnershipEdge.source_entity_id == OwnershipEntity.id,
+                        OwnershipEdge.target_entity_id == OwnershipEntity.id,
+                    ),
+                )
                 .where(OwnershipEdge.vessel_imo == imo)
             )
-            return list(result.scalars().all())
+            seen_ids = set()
+            entities = []
+            for row in result.all():
+                entity = row[0]
+                rel_type = row[1]
+                if entity.id in seen_ids:
+                    continue
+                seen_ids.add(entity.id)
+                setattr(entity, "relationship_type", rel_type)
+                entities.append(entity)
+            return entities
         except Exception:
             return []
 
