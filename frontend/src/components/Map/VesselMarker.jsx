@@ -42,7 +42,7 @@ function createVesselIcon(vesselType, heading, isSelected, riskScore) {
     className: `vessel-marker ${isSelected ? 'vessel-marker-selected' : ''}`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
-    tooltipAnchor: [size / 2 + 4, 0],
+    tooltipAnchor: [0, -size / 2],
   })
 
   iconCache.set(cacheKey, icon)
