@@ -243,12 +243,18 @@ def extract_position(decoded: dict[str, Any]) -> PositionData | None:
     course = _safe_float(decoded.get("course") if decoded.get("course") is not None else decoded.get("cog"))
     heading = _safe_float(decoded.get("heading") if decoded.get("heading") is not None else decoded.get("true_heading"))
 
-    # In AIS standard, speed >= 102.2 kn (sentinel 102.3 kn) and heading == 511 deg
-    # represent invalid/unavailable values. Treat them as None.
+    # In AIS standard, speed >= 102.2 kn (sentinel 102.3 kn), course >= 360.0 deg,
+    # and heading == 511 deg represent invalid/unavailable values. Treat them as None.
     if speed is not None and speed >= 102.2:
         speed = None
+    if course is not None and course >= 360.0:
+        course = None
     if heading is not None and heading == 511.0:
         heading = None
+
+    raw_nav_status = decoded.get("nav_status")
+    if raw_nav_status is None:
+        raw_nav_status = decoded.get("status")
 
     return PositionData(
         mmsi=int(mmsi),
@@ -257,7 +263,7 @@ def extract_position(decoded: dict[str, Any]) -> PositionData | None:
         speed=speed,
         course=course,
         heading=heading,
-        nav_status=_safe_int(decoded.get("nav_status") or decoded.get("status")),
+        nav_status=_safe_int(raw_nav_status),
         msg_type=_safe_int(decoded.get("msg_type")),
         timestamp=decoded.get("time_utc"),
     )
