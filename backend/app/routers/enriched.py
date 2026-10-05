@@ -72,12 +72,17 @@ def _resolve_flag_from_mmsi(mmsi: int | str | None) -> dict[str, str] | None:
         mid = int(mmsi_str[:3])
         country = COUNTRY_MAPPING.get(mid)
         if country:
-            info = get_flag_info(country[0])
-            if info and info.get("emoji") == "🏴":
+            alpha2 = country[0] if len(country) > 0 else ""
+            country_name = country[1] if len(country) > 1 else ""
+            info = get_flag_info(alpha2)
+            if not info or info.get("emoji") == "🏴":
                 for code3, data in _FLAGS.items():
-                    if data["name"].lower() == country[1].lower():
+                    if country_name and data.get("name", "").lower() == country_name.lower():
                         return get_flag_info(code3)
-            return info
+            if info:
+                return info
+            if country_name:
+                return {"code": alpha2, "name": country_name, "emoji": "🏴"}
     return None
 
 
