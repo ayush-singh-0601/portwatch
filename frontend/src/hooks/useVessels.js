@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { getEnrichedVessels } from '../services/api'
 import { MOCK_VESSELS } from '../utils/mockData'
 import useWebSocket from './useWebSocket'
 
@@ -66,22 +67,19 @@ export default function useVessels() {
     setLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams({
-        limit: String(INITIAL_VESSEL_LIMIT),
-        active_minutes: String(ACTIVE_POSITION_MINUTES),
-        include_unregistered: 'true',
+      const data = await getEnrichedVessels({
+        limit: INITIAL_VESSEL_LIMIT,
+        active_minutes: ACTIVE_POSITION_MINUTES,
+        include_unregistered: true,
       })
-      const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
-      const response = await fetch(`${apiBase.replace(/\/$/, '')}/vessels/enriched?${params}`)
-      if (!response.ok) throw new Error('Backend unavailable')
-      const data = await response.json()
 
       // The enriched endpoint returns a flat JSON array — exactly
       // the shape our components expect.
       setVessels(normalizeVessels(data))
-    } catch {
+    } catch (err) {
       // Fallback to mock data
-      console.log('[Vessels] Using mock data (backend unavailable)')
+      console.warn('[Vessels] Backend unavailable, using mock data:', err?.message || err)
+      setError(err)
       setVessels(normalizeVessels(MOCK_VESSELS))
     } finally {
       setLoading(false)
@@ -216,7 +214,11 @@ export default function useVessels() {
         const mmsiClean = String(vessel.mmsi || '').replace(/\D/g, '')
 
         const matchesTokens = tokens.length > 0 && tokens.every(token => text.includes(token))
-        const matchesDigits = cleanDigits.length >= 3 && (imoClean.includes(cleanDigits) || mmsiClean.includes(cleanDigits))
+        const matchesDigits =
+          cleanDigits.length >= 3 &&
+          tokens.length === 1 &&
+          /^\d+$/.test(tokens[0]) &&
+          (imoClean.includes(cleanDigits) || mmsiClean.includes(cleanDigits))
 
         if (matchesTokens || matchesDigits) {
           results.push(vessel)
