@@ -60,11 +60,19 @@ class AISAnomalyDetector:
         query = (
             select(Position)
             .where(Position.mmsi == mmsi)
-            .order_by(Position.time.asc())
+            .order_by(Position.time.desc())
             .limit(100)
         )
         result = await self.db.execute(query)
-        positions = list(result.scalars().all())
+        raw_positions = list(result.scalars().all())
+        positions = sorted(
+            raw_positions,
+            key=lambda p: (
+                p.time.replace(tzinfo=timezone.utc)
+                if getattr(p, "time", None) is not None and getattr(p.time, "tzinfo", None) is None
+                else (getattr(p, "time", None) or datetime.min.replace(tzinfo=timezone.utc))
+            ),
+        )
 
         anomalies = []
         if len(positions) < 2:
