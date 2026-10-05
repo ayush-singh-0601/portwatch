@@ -119,9 +119,15 @@ async def get_current_positions(
 
     # If filtering by vessel type, join with vessels table
     if vessel_type is not None:
-        current_positions_query = current_positions_query.join(
-            Vessel, Vessel.mmsi == VesselPosition.mmsi
-        ).where(Vessel.vessel_type.ilike(f"%{vessel_type}%"))
+        raw_types = [t.strip() for t in vessel_type.split(",") if t.strip()]
+        if raw_types:
+            type_clauses = []
+            for t in raw_types:
+                escaped = t.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+                type_clauses.append(Vessel.vessel_type.ilike(f"%{escaped}%"))
+            current_positions_query = current_positions_query.join(
+                Vessel, Vessel.mmsi == VesselPosition.mmsi
+            ).where(or_(*type_clauses))
 
     result = await db.execute(current_positions_query.limit(limit))
     rows = result.scalars().all()
