@@ -3,8 +3,9 @@ Pydantic schemas for vessel position data.
 """
 
 from datetime import datetime
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class PositionBase(BaseModel):
@@ -15,9 +16,33 @@ class PositionBase(BaseModel):
     longitude: float = Field(..., ge=-180, le=180)
     speed: float | None = Field(None, ge=0, description="Speed over ground (knots)")
     course: float | None = Field(None, ge=0, le=360, description="Course over ground (degrees)")
-    heading: float | None = Field(None, ge=0, le=360, description="True heading (degrees)")
+    heading: float | None = Field(None, ge=0, le=511, description="True heading (degrees, 511 indicates unavailable)")
     nav_status: int | None = Field(None, ge=0, le=15, description="AIS navigational status code")
     msg_type: int | None = Field(None, description="AIS message type")
+
+    @field_validator("heading", mode="before")
+    @classmethod
+    def normalize_heading(cls, v: Any) -> float | None:
+        if v is not None:
+            try:
+                fv = float(v)
+                if fv == 511.0 or fv > 360.0:
+                    return None
+            except (ValueError, TypeError):
+                return None
+        return v
+
+    @field_validator("course", mode="before")
+    @classmethod
+    def normalize_course(cls, v: Any) -> float | None:
+        if v is not None:
+            try:
+                fv = float(v)
+                if fv >= 360.0:
+                    return None
+            except (ValueError, TypeError):
+                return None
+        return v
 
 
 class PositionResponse(PositionBase):
